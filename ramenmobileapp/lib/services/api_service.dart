@@ -395,11 +395,27 @@ class ApiService {
     try {
       final response = await _dio.get('/mobile-orders/$id');
       if (response.statusCode == 200) {
-        return Order.fromJson(response.data);
+        return Order.fromJson(response.data['data']);
+      } else {
+        throw Exception('Failed to get order: ${response.statusMessage}');
       }
-      throw Exception('Failed to fetch order');
-    } on DioException catch (e) {
-      throw _handleDioError(e);
+    } catch (e) {
+      print('❌ Error getting order by ID: $e');
+      throw Exception('Failed to get order: $e');
+    }
+  }
+
+  Future<bool> cancelOrder(String orderId) async {
+    try {
+      final response = await _dio.patch('/mobile-orders/$orderId/cancel');
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception('Failed to cancel order: ${response.statusMessage}');
+      }
+    } catch (e) {
+      print('❌ Error canceling order: $e');
+      throw Exception('Failed to cancel order: $e');
     }
   }
 

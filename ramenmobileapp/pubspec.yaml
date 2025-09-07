@@ -87,6 +87,8 @@ flutter:
     - assets/coke.webp
     - assets/profiles.jpg
     - assets/profilesgg.png
+    - assets/gcash_logo.png
+    - assets/paymaya_logo.png
     - assets/animations/
 
   # An image asset can refer to one or more resolution-specific "variants", see

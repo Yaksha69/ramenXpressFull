@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/payment_method.dart';
-import 'edit_payment_method_page.dart';
-import '../services/api_service.dart';
 
 class PaymentmethodPage extends StatefulWidget {
   const PaymentmethodPage({super.key});
@@ -21,23 +19,29 @@ class _PaymentmethodPageState extends State<PaymentmethodPage> {
   }
 
   Future<void> _fetchPaymentMethods() async {
-    setState(() { _isLoading = true; });
-    try {
-      final api = ApiService();
-      final methods = await api.getPaymentMethods();
-      setState(() {
-        paymentMethods = methods;
-      });
-    } catch (e) {
-      setState(() {
-        paymentMethods = [];
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load payment methods: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() { _isLoading = false; });
-    }
+    // Always show default payment methods immediately - no loading or API dependency
+    paymentMethods = [
+      PaymentMethod(
+        id: 'cash',
+        type: PaymentType.cash,
+        title: 'Cash on Delivery',
+        isDefault: true,
+      ),
+      PaymentMethod(
+        id: 'gcash',
+        type: PaymentType.gcash,
+        title: 'GCash'
+      ),
+      PaymentMethod(
+        id: 'maya',
+        type: PaymentType.maya,
+        title: 'PayMaya',
+      ),
+    ];
+    
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   void _setDefaultMethod(int index) {
@@ -54,74 +58,7 @@ class _PaymentmethodPageState extends State<PaymentmethodPage> {
     });
   }
 
-  Future<void> _addPaymentMethod() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const EditPaymentMethodPage(),
-      ),
-    );
-    if (result != null && result is Map<String, dynamic>) {
-      try {
-        final api = ApiService();
-        await api.createPaymentMethodFromMap({
-          'type': result['type'].toString().split('.').last,
-          'title': result['title'],
-          'accountName': result['title'],
-          'mobileNumber': result['accountNumber'],
-          'isDefault': result['isDefault'] ?? false,
-        });
-        await _fetchPaymentMethods();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment method added successfully'), backgroundColor: Colors.green),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add payment method: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
 
-  Future<void> _editPaymentMethod(int index) async {
-    final method = paymentMethods[index];
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditPaymentMethodPage(
-          paymentMethod: {
-            'type': method.type,
-            'title': method.title,
-            'accountNumber': method.accountNumber,
-            'isDefault': method.isDefault,
-          },
-        ),
-      ),
-    );
-    if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        // If set as default, unset all others
-        if (result['isDefault'] == true) {
-          for (int i = 0; i < paymentMethods.length; i++) {
-            paymentMethods[i] = PaymentMethod(
-              id: paymentMethods[i].id,
-              type: paymentMethods[i].type,
-              title: paymentMethods[i].title,
-              accountNumber: paymentMethods[i].accountNumber,
-              isDefault: false,
-            );
-          }
-        }
-        paymentMethods[index] = PaymentMethod(
-          id: method.id,
-          type: result['type'],
-          title: result['title'],
-          accountNumber: result['accountNumber'],
-          isDefault: result['isDefault'] ?? false,
-        );
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,16 +88,27 @@ class _PaymentmethodPageState extends State<PaymentmethodPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: ListTile(
-                          leading: Icon(
-                            method.icon,
-                            color: Colors.orange,
-                            size: 32,
-                          ),
+                          leading: method.logoAsset != null
+                              ? Container(
+                                  width: 32,
+                                  height: 32,
+                                  child: Image.asset(
+                                    method.logoAsset!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                )
+                              : Icon(
+                                  method.icon,
+                                  color: Colors.orange,
+                                  size: 32,
+                                ),
                           title: Row(
                             children: [
-                              Text(
-                                method.displayName,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              Expanded(
+                                child: Text(
+                                  method.displayName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
                               ),
                               if (method.isDefault)
                                 Container(
@@ -184,37 +132,47 @@ class _PaymentmethodPageState extends State<PaymentmethodPage> {
                             ],
                           ),
                           subtitle: Text(method.title),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.grey),
-                            onPressed: () {
-                              _editPaymentMethod(index);
-                            },
-                          ),
+                          trailing: method.isDefault 
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.orange,
+                                )
+                              : null,
                           onTap: () {
-                            _setDefaultMethod(index);
+                            if (method.type == PaymentType.gcash || method.type == PaymentType.maya) {
+                              // Show account linking info for digital wallets
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: Text('${method.displayName} Payment'),
+                                    content: Text(
+                                      'To pay with ${method.displayName}, you\'ll need to link your account during checkout. '
+                                      'The payment will be processed securely through PayMongo gateway.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          _setDefaultMethod(index);
+                                        },
+                                        child: const Text('Select This Method'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            } else {
+                              _setDefaultMethod(index);
+                            }
                           },
                         ),
                       );
                     },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _addPaymentMethod,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Payment Method'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ],

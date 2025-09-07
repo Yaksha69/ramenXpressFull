@@ -54,6 +54,78 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     }
   }
 
+  bool _canCancelOrder() {
+    if (_order == null) return false;
+    
+    // Only allow cancellation for pending orders (not preparing, ready, out for delivery, or delivered)
+    final status = _order!.status.name.toLowerCase();
+    print('🔍 Order status: $status, Can cancel: ${status == 'pending'}');
+    return status == 'pending';
+  }
+
+  Future<void> _cancelOrder() async {
+    // Show confirmation dialog
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep Order'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await ApiService().cancelOrder(widget.orderId);
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order cancelled successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Refresh order details
+      await _loadOrderDetails();
+      
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to cancel order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +137,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          // Always show cancel button for testing - will be conditional later
+          TextButton(
+            onPressed: _order != null && _canCancelOrder() ? _cancelOrder : null,
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: _order != null && _canCancelOrder() ? Colors.red : Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -126,6 +211,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
             DeliveryStatusWidget(
               orderStatus: _order!.status.name,
               lottieAnimationPath: 'assets/animations/delivery_guy.json',
+              deliveryMethod: _order!.deliveryMethod,
               orderDetails: {
                 'orderId': _order!.id,
                 'estimatedTime': _getEstimatedTime(),
@@ -156,12 +242,18 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   Widget _buildOrderTimeline() {
+    final isPickup = _order!.deliveryMethod.toLowerCase() == 'pickup';
+    
     final steps = [
       {'title': 'Order Placed', 'status': 'completed'},
       {'title': 'Preparing', 'status': _getStepStatus('preparing')},
-      {'title': 'Ready for Pickup', 'status': _getStepStatus('ready')},
-      {'title': 'Out for Delivery', 'status': _getStepStatus('out for delivery')},
-      {'title': 'Delivered', 'status': _getStepStatus('delivered')},
+      if (isPickup) ..[
+        {'title': 'Ready for Pickup', 'status': _getStepStatus('ready')},
+      ] else ..[
+        {'title': 'Ready', 'status': _getStepStatus('ready')},
+        {'title': 'Out for Delivery', 'status': _getStepStatus('out for delivery')},
+        {'title': 'Delivered', 'status': _getStepStatus('delivered')},
+      ],
     ];
 
     return Container(
@@ -363,11 +455,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
           ),
           const SizedBox(height: 16),
           _buildSummaryRow('Subtotal', '₱${_order!.total ?? 0}'),
-          _buildSummaryRow('Delivery Fee', '₱50'),
+          if (_order!.deliveryMethod.toLowerCase() != 'pickup')
+            _buildSummaryRow('Delivery Fee', '₱50'),
           const Divider(),
           _buildSummaryRow(
             'Total',
-            '₱${(_order!.total ?? 0) + 50}',
+            '₱${(_order!.total ?? 0) + (_order!.deliveryMethod.toLowerCase() != 'pickup' ? 50 : 0)}',
             isTotal: true,
           ),
           const SizedBox(height: 16),

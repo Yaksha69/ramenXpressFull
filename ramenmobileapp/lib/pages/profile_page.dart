@@ -290,8 +290,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                 child: const Text('Cancel'),
                               ),
                               TextButton(
-                                onPressed: () {
-                                  Navigator.pushReplacementNamed(context, '/login');
+                                onPressed: () async {
+                                  // Clear the authentication token
+                                  final apiService = ApiService();
+                                  await apiService.logout();
+                                  
+                                  // Navigate to login page
+                                  if (mounted) {
+                                    Navigator.pushReplacementNamed(context, '/login');
+                                  }
                                 },
                                 child: const Text(
                                   'Logout',

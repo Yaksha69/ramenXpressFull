@@ -9,7 +9,6 @@ import '../models/menu_item.dart';
 import '../models/delivery_address.dart';
 import '../models/payment_method.dart';
 import 'edit_payment_method_page.dart';
-import 'paymentmethod_page.dart';
 
 class PaymentPage extends StatefulWidget {
   final Map<String, dynamic>? orderData;
@@ -178,29 +177,35 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Future<void> _loadPaymentMethods() async {
-    try {
-      print('🔍 Loading payment methods...');
-      paymentMethods = await _apiService.getPaymentMethods();
-      print('✅ Loaded ${paymentMethods.length} payment methods');
-      
-      // Do not auto-select any payment method; let the customer choose
-      selectedPaymentMethod = null;
-      if (paymentMethods.isEmpty) {
-        print('⚠️ No payment methods found');
-      }
-    } catch (e) {
-      print('❌ Error loading payment methods: $e');
-      paymentMethods = [];
-      // Show user-friendly error message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load payment methods: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    }
+    // Always show all three payment methods directly - no API dependency
+    paymentMethods = [
+      PaymentMethod(
+        id: 'cash',
+        type: PaymentType.cash,
+        title: 'Cash on Delivery',
+        isDefault: true,
+      ),
+      PaymentMethod(
+        id: 'gcash',
+        type: PaymentType.gcash,
+        title: 'GCash',
+      ),
+      PaymentMethod(
+        id: 'maya',
+        type: PaymentType.maya,
+        title: 'PayMaya',
+      ),
+    ];
+    
+    // Auto-select cash on delivery as default
+    selectedPaymentMethod = paymentMethods.firstWhere(
+      (method) => method.type == PaymentType.cash,
+      orElse: () => paymentMethods.first,
+    );
+    
+    setState(() {
+      isLoading = false;
+    });
   }
 
   Future<void> _loadAddOns() async {
@@ -368,7 +373,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                 height: 40,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFD32D43),
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
                                   Icons.add,
@@ -382,8 +387,8 @@ class _PaymentPageState extends State<PaymentPage> {
                       ],
                     ),
                   ),
-                  
-                  const Divider(height: 1),
+                    
+                    const Divider(height: 1),
                   
                   Expanded(
                     child: Padding(
@@ -1059,150 +1064,85 @@ class _PaymentPageState extends State<PaymentPage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (paymentMethods.isNotEmpty) ...[
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8F9FA),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFE9ECEF),
-                                width: 1,
-                              ),
-                            ),
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(255, 255, 235, 235),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    selectedPaymentMethod?.icon ?? Icons.account_balance_wallet,
-                                    color: const Color(0xFFD32D43),
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        selectedPaymentMethod?.title ?? 'Select a payment method',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF1A1A1A),
-                                        ),
-                                      ),
-                                      Text(
-                                        selectedPaymentMethod?.displayName ?? '',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuButton<PaymentMethod>(
-                                  icon: const Icon(
-                                    Icons.arrow_drop_down,
-                                    color: Color(0xFFD32D43),
-                                  ),
-                                  onSelected: (PaymentMethod method) {
-                                    setState(() {
-                                      selectedPaymentMethod = method;
-                                    });
-                                  },
-                                  itemBuilder: (BuildContext context) {
-                                    return paymentMethods.map((PaymentMethod method) {
-                                      return PopupMenuItem<PaymentMethod>(
-                                        value: method,
-                                        child: Row(
-                                          children: [
-                                            Icon(method.icon, size: 20),
-                                            const SizedBox(width: 8),
-                                            Text(method.title),
-                                          ],
-                                        ),
-                                      );
-                                    }).toList();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ] else ...[
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FA),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFE9ECEF),
-                              width: 1,
-                            ),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
+                        // Payment method selection cards (TikTok style)
+                        Column(
+                          children: paymentMethods.map((method) {
+                            final isSelected = selectedPaymentMethod?.id == method.id;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedPaymentMethod = method;
+                                });
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 255, 235, 235),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: isSelected ? const Color(0xFFFFF5F5) : const Color(0xFFF8F9FA),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? const Color(0xFFD32D43) : const Color(0xFFE9ECEF),
+                                    width: isSelected ? 2 : 1,
+                                  ),
                                 ),
-                                child: const Icon(
-                                  Icons.account_balance_wallet,
-                                  color: Color(0xFFD32D43),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
                                   children: [
-                                    Text(
-                                        'No payment methods',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1A1A1A),
+                                    method.logoAsset != null
+                                        ? Container(
+                                            width: 32,
+                                            height: 32,
+                                            child: Image.asset(
+                                              method.logoAsset!,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          )
+                                        : Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: const Color.fromARGB(255, 255, 235, 235),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              method.icon,
+                                              color: const Color(0xFFD32D43),
+                                              size: 16,
+                                            ),
+                                          ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            method.displayName,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected ? const Color(0xFFD32D43) : const Color(0xFF1A1A1A),
+                                            ),
+                                          ),
+                                          if (method.type == PaymentType.gcash || method.type == PaymentType.maya)
+                                            const Text(
+                                              'Link account during checkout',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                    Text(
-                                        'Add a payment method to continue',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
+                                    if (isSelected)
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFFD32D43),
+                                        size: 24,
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                        ],
-                        const SizedBox(height: 12),
-                        TextButton.icon(
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const PaymentmethodPage(),
-                              ),
                             );
-                            await _loadPaymentMethods();
-                          },
-                          icon: const Icon(Icons.add, color: Color(0xFFD32D43)),
-                          label: const Text(
-                            'Add New Payment Method',
-                            style: TextStyle(color: Color(0xFFD32D43)),
-                          ),
+                          }).toList(),
                         ),
                       ],
                     ),
@@ -1360,8 +1300,8 @@ class _PaymentPageState extends State<PaymentPage> {
                     child: ElevatedButton(
                       onPressed: () async {
                         try {
-                          // Always require delivery address (for both pickup and delivery)
-                          if (selectedAddress == null) {
+                          // Only require delivery address for delivery orders, not pickup
+                          if (selectedDeliveryMethod == 'Delivery' && selectedAddress == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Please select a delivery address'),
@@ -1372,7 +1312,7 @@ class _PaymentPageState extends State<PaymentPage> {
                           }
 
                           // Validate payment method
-                          if (paymentMethods.isNotEmpty && selectedPaymentMethod == null) {
+                          if (selectedPaymentMethod == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Please select a payment method'),

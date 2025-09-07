@@ -108,7 +108,7 @@ class _DeliveryAnimationState extends State<DeliveryAnimation>
           
           // Subtitle
           Text(
-            "Hang tight! Our delivery partner is bringing your delicious ramen to you.",
+            "Hang tight! Our delivery rider is bringing your delicious ramen to you.",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
               height: 1.5,
@@ -195,12 +195,14 @@ class DeliveryStatusWidget extends StatelessWidget {
   final String orderStatus;
   final String? lottieAnimationPath;
   final Map<String, dynamic>? orderDetails;
+  final String? deliveryMethod;
 
   const DeliveryStatusWidget({
     super.key,
     required this.orderStatus,
     this.lottieAnimationPath,
     this.orderDetails,
+    this.deliveryMethod,
   });
 
   @override
@@ -224,12 +226,7 @@ class DeliveryStatusWidget extends StatelessWidget {
           _buildStatusHeader(context),
           const SizedBox(height: 20),
           if (_shouldShowAnimation()) ...[
-            DeliveryAnimation(
-              animationPath: lottieAnimationPath ?? 'assets/animations/delivery_guy.json',
-              message: _getStatusMessage(),
-              width: 150,
-              height: 150,
-            ),
+            _buildAnimationForOrderType(context),
           ] else ...[
             _buildStatusIcon(context),
             const SizedBox(height: 16),
@@ -360,23 +357,113 @@ class DeliveryStatusWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildAnimationForOrderType(BuildContext context) {
+    final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
+    
+    if (isPickup && orderStatus.toLowerCase() == 'ready') {
+      // Show pickup animation for ready pickup orders
+      return _buildPickupAnimation(context);
+    } else if (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'on the way')) {
+      // Show delivery animation for delivery orders
+      return DeliveryAnimation(
+        animationPath: lottieAnimationPath ?? 'assets/animations/delivery_guy.json',
+        message: _getStatusMessage(),
+        width: 150,
+        height: 150,
+      );
+    } else {
+      // Show static icon for other states
+      return Column(
+        children: [
+          _buildStatusIcon(context),
+          const SizedBox(height: 16),
+          Text(
+            _getStatusMessage(),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _buildPickupAnimation(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 150,
+          height: 150,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.store,
+                size: 60,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "🛍️",
+                style: const TextStyle(fontSize: 32),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          _getStatusMessage(),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          "Your order is ready for pickup at our store!",
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.grey[600],
+            height: 1.5,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
   bool _shouldShowAnimation() {
-    return orderStatus.toLowerCase() == 'ready' ||
-           orderStatus.toLowerCase() == 'out for delivery' || 
-           orderStatus.toLowerCase() == 'on the way';
+    final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
+    return (isPickup && orderStatus.toLowerCase() == 'ready') ||
+           (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'on the way'));
   }
 
   String _getStatusMessage() {
+    final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
+    
     switch (orderStatus.toLowerCase()) {
       case 'preparing':
         return 'Preparing your order';
       case 'ready':
-        return 'Order is ready!';
+        return isPickup ? 'Ready for pickup!' : 'Order is ready!';
       case 'out for delivery':
       case 'on the way':
         return 'On the way to you!';
       case 'delivered':
-        return 'Order delivered!';
+        return isPickup ? 'Order picked up!' : 'Order delivered!';
       default:
         return 'Order status: $orderStatus';
     }
@@ -399,11 +486,13 @@ class DeliveryStatusWidget extends StatelessWidget {
   }
 
   IconData _getStatusIcon() {
+    final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
+    
     switch (orderStatus.toLowerCase()) {
       case 'preparing':
         return Icons.restaurant;
       case 'ready':
-        return Icons.check_circle_outline;
+        return isPickup ? Icons.store : Icons.check_circle_outline;
       case 'out for delivery':
       case 'on the way':
         return Icons.delivery_dining;

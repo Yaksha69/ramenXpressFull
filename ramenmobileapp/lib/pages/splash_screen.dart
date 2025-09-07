@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'welcome_page.dart';
 import 'login_page.dart';
+import 'homepage.dart' as home;
+import '../services/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,9 +26,19 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final hasSeenWelcome = prefs.getBool('has_seen_welcome') ?? false;
     
+    // Check for existing authentication token
+    final apiService = ApiService();
+    final savedToken = await apiService.loadToken();
+    
     if (mounted) {
-      if (hasSeenWelcome) {
-        // User has seen welcome before, go to login
+      if (savedToken != null && savedToken.isNotEmpty) {
+        // User has a saved token, automatically log them in
+        print('🔑 Found saved token, logging user in automatically');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const home.HomePage()),
+        );
+      } else if (hasSeenWelcome) {
+        // User has seen welcome before but no token, go to login
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginPage()),
         );
