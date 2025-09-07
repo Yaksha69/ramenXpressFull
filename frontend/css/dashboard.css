@@ -1,0 +1,292 @@
+/* Global Reset and Base Styles */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+}
+
+/* Hide scrollbars but keep scroll functionality */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  padding-top: 0;
+}
+
+/* Fixed Navbar Styles */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1040;
+  height: 56px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Main Content Adjustment for Fixed Navbar */
+main {
+  margin-top: 0px;
+  min-height: calc(100vh - 56px);
+  background-color: #f8f9fa;
+  padding-top: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Sidebar Styles */
+#sidebarMenu {
+  min-height: calc(100vh - 56px);
+  background-color: #343a40;
+  position: sticky;
+  top: 56px;
+  z-index: 1020;
+  padding-top: 1rem;
+}
+
+/* Mobile Sidebar Overlay */
+@media (max-width: 767.98px) {
+  #sidebarMenu {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1030;
+    background-color: #343a40;
+  }
+  
+  #sidebarMenu:not(.show) {
+    display: none !important;
+  }
+  
+  #sidebarMenu.show {
+    display: block !important;
+  }
+}
+
+/* Sidebar Overlay for Mobile */
+@media (max-width: 767.98px) {
+  body.sidebar-open::before {
+    content: '';
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1030;
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 767.98px) {
+  .navbar-brand {
+    font-size: 1rem;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .welcome-text {
+    font-size: 0.9rem;
+  }
+  
+  .summary-card {
+    margin-bottom: 1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+}
+
+/* Pagination Styling for Inventory */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading and Error States */
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+.fa-2x {
+  font-size: 2em;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Empty State Styling */
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Table Enhancements */
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.075);
+}
+
+.table th {
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+  vertical-align: middle;
+  color: #495057;
+}
+
+/* Badge Enhancements */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge.bg-success {
+  background-color: #28a745 !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+/* Button Enhancements */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+}
+
+.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+}
+
+.btn-outline-danger:hover {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+/* Dashboard Header Styling */
+.main-content h2 {
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: 0;
+}
+
+.main-content .text-muted {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Dashboard Welcome Section */
+.dashboard-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
+  padding: 1.5rem;
+  color: white;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header h2 {
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header .welcome-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+}
+
+
+/* Responsive Sidebar and Main Content */
+@media (max-width: 767.98px) {
+  #sidebarMenu {
+    width: 100%;
+    transform: translateX(-100%);
+  }
+  #sidebarMenu.show {
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  #sidebarMenu {
+    width: 250px;
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+  }
+}
+
+/* Optimize for Performance - Simplified approach */
+#sidebarMenu, .navbar {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Remove will-change and contain properties that might cause lag */
+.main-content {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+
+
+
+

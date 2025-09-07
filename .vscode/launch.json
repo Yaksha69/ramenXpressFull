@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Edge",
+            "request": "launch",
+            "type": "msedge",
+            "url": "http://localhost:3001",
+            "webRoot": "/ramenmobileapp/lib/main.dart",
+            "liveReload": true
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome against localhost",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}",
+            "liveReload": true
+        },
+        {
+            "name": "Launch Edge - Flutter Web",
+            "request": "launch",
+            "type": "msedge",
+            "url": "http://localhost:3001", 
+            "webRoot": "/ramenmobileapp/lib/main.dart",
+            "liveReload": true
+        }
+    ]
+}

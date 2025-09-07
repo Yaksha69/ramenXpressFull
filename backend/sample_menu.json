@@ -1,0 +1,84 @@
+[
+    {
+      "name": "Tonkotsu Ramen",
+      "category": "Ramen",
+      "price": 249.00,
+      "image": "../assets/ramen1.jpg",
+      "ingredients": [
+        { "name": "Ramen Noodles", "quantity": 1, "unit": "pack" },
+        { "name": "Chashu Pork", "quantity": 2, "unit": "slices" },
+        { "name": "Marinated Egg", "quantity": 1, "unit": "pc" },
+        { "name": "Nori", "quantity": 2, "unit": "sheet" }
+      ]
+    },
+    {
+      "name": "Shoyu Ramen",
+      "category": "Ramen",
+      "price": 229.00,
+      "image": "../assets/ramen2.jpg",
+      "ingredients": [
+        { "name": "Ramen Noodles", "quantity": 1, "unit": "pack" },
+        { "name": "Chashu Pork", "quantity": 2, "unit": "slices" },
+        { "name": "Nori", "quantity": 1, "unit": "sheet" },
+        { "name": "Marinated Egg", "quantity": 1, "unit": "pc" }
+      ]
+    },
+    {
+      "name": "Miso Ramen",
+      "category": "Ramen",
+      "price": 239.00,
+      "image": "../assets/ramen3.jpg",
+      "ingredients": [
+        { "name": "Miso Paste", "quantity": 0.05, "unit": "kg" },
+        { "name": "Chicken Bones", "quantity": 0.3, "unit": "kg" },
+        { "name": "Ramen Noodles", "quantity": 1, "unit": "pack" },
+        { "name": "Ground Pork", "quantity": 50, "unit": "g" },
+        { "name": "Marinated Egg", "quantity": 1, "unit": "pc" }
+      ]
+    },
+    {
+      "name": "Gyoza (6 pcs)",
+      "category": "Side Dishes",
+      "price": 129.00,
+      "image": "../assets/ramen4.jpg",
+      "ingredients": [
+        { "name": "Gyoza Wrappers", "quantity": 6, "unit": "pcs" },
+        { "name": "Ground Pork", "quantity": 60, "unit": "g" },
+        { "name": "Cabbage", "quantity": 50, "unit": "g" }
+      ]
+    },
+    {
+      "name": "Chicken Karaage",
+      "category": "Side Dishes",
+      "price": 149.00,
+      "image": "../assets/ramen1.jpg",
+      "ingredients": [
+        { "name": "Chicken Thigh", "quantity": 150, "unit": "g" },
+        { "name": "Cornstarch", "quantity": 20, "unit": "g" },
+        { "name": "Oil", "quantity": 0.2, "unit": "L" }
+      ]
+    },
+    {
+      "name": "Beef Rice Bowl",
+      "category": "Rice Bowls",
+      "price": 199.00,
+      "image": "../assets/ricebowl.jpg",
+      "ingredients": [
+        { "name": "Beef Strips", "quantity": 100, "unit": "g" },
+        { "name": "White Rice", "quantity": 200, "unit": "g" },
+        { "name": "Onions", "quantity": 50, "unit": "g" }
+      ]
+    },
+    {
+      "name": "Pork Rice Bowl",
+      "category": "Rice Bowls",
+      "price": 179.00,
+      "image": "../assets/ricebowl2.jpg",
+      "ingredients": [
+        { "name": "Pork Belly", "quantity": 100, "unit": "g" },
+        { "name": "White Rice", "quantity": 200, "unit": "g" },
+        { "name": "Onions", "quantity": 50, "unit": "g" }
+      ]
+    }
+  ]
+  

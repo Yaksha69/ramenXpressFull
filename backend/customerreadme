@@ -1,0 +1,21 @@
+#Customer register and login
+
+## Register
+POST http://localhost:3000/api/v1/customers/register
+Body (JSON):
+{
+  "firstName": "kyla",
+  "lastName": "cabungcal",
+  "email": "bb@gmail.com",
+  "phoneNumber": "09652347654",
+  "password": "mykela123"
+}
+
+## Login
+POST http://localhost:3000/api/v1/customers/login
+Body (JSON):
+{
+  "username": "kela",
+  "password": "mykela123"
+}
+

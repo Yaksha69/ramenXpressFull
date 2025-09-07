@@ -1,0 +1,30 @@
+/* Global Performance Optimizations */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  /* Performance optimizations for smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+}
+
+/* Prevent horizontal scroll issues */
+* {
+  box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, #1a1a1a 0%, #dc3545 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    /* Performance optimizations for smooth scrolling */
+    transform: translateZ(0); /* Force hardware acceleration */
+    -webkit-transform: translateZ(0); /* Safari support */
+    backface-visibility: hidden; /* Prevent flicker */
+}

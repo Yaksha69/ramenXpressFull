@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RamenXpress POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="../css/pos.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" id="sidebarToggle">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+        Ramen App
+      </a>
+      <div class="d-flex align-items-center ms-auto">
+        <img src="../assets/notif.png" alt="notif" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+        <div class="dropdown">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+            <li>
+              <button class="dropdown-item" onclick="window.location.href='../login.html'">Logout</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row min-vh-100">
+      <!-- Sidebar -->
+      <nav id="sidebarMenu" class="bg-dark text-white p-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fw-bold mb-0">Menu</h4>
+          <button class="btn-close btn-close-white d-md-none" id="closeSidebar"></button>
+        </div>
+        <ul class="nav flex-column">
+          <li class="nav-item mb-2">
+            <a href="inventory.html" class="nav-link text-white active bg-danger rounded">
+              <i class="fas fa-shopping-cart me-2"></i> Point of Sale
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a href="../html/mobileOrder.html" class="nav-link text-white">
+              <i class="fas fa-users me-2"></i> Mobile Order
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="row g-3">
+          <!-- Menu Section -->
+          <div class="col-12 col-lg-8">
+            <!-- Search Bar -->
+            <div class="bg-white pb-2 px-2 sm:px-4 pt-4 shadow-sm rounded-b-lg">
+              <div class="mb-4">
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">
+                    <i class="fas fa-search text-gray-400"></i>
+                  </span>
+                  <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Search menu items...">
+                </div>
+              </div>
+            </div>
+            <!-- Category Buttons (Sticky) -->
+            <div class="category-container">
+              <div class="d-flex flex-wrap gap-2 mb-2 overflow-auto">
+                <button class="btn btn-danger rounded-pill px-3 px-sm-4" data-category="All">All</button>
+                <button class="btn btn-outline-danger rounded-pill px-3 px-sm-4" data-category="Ramen">Ramen</button>
+                <button class="btn btn-outline-danger rounded-pill px-3 px-sm-4" data-category="Rice Bowls">Rice Bowls</button>
+                <button class="btn btn-outline-danger rounded-pill px-3 px-sm-4" data-category="Side Dishes">Side Dishes</button>
+                <button class="btn btn-outline-danger rounded-pill px-3 px-sm-4" data-category="Drinks">Drinks</button>
+              </div>
+            </div>
+            <!-- Menu Items Grid -->
+            <div class="menu-items-container">
+              <div class="row g-2 g-sm-3 mt-2" id="menuItemsGrid">
+                <!-- Menu items will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Cart Section -->
+          <div class="col-12 col-lg-4">
+            <div class="card shadow-sm h-100">
+              <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Cart</h5>
+                <span class="text-muted small">#0001</span>
+              </div>
+              <div class="card-body d-flex flex-column">
+                <!-- Cart Items -->
+                <div class="flex-grow-1 overflow-auto" id="cartItems">
+                  <!-- Cart items will be populated by JavaScript -->
+                </div>
+
+                <!-- Order Type -->
+                <div class="mt-3">
+                  <label class="form-label">Order Type</label>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger flex-grow-1 active" data-order-type="Dine-in">
+                      <i class="fas fa-utensils mb-1"></i>
+                      <div class="small">Dine-in</div>
+                    </button>
+                    <button class="btn btn-outline-danger flex-grow-1" data-order-type="Takeout">
+                      <i class="fas fa-shopping-bag mb-1"></i>
+                      <div class="small">Takeout</div>
+                    </button>
+                    <button class="btn btn-outline-danger flex-grow-1" data-order-type="Pickup">
+                      <i class="fas fa-box mb-1"></i>
+                      <div class="small">Pickup</div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="mt-3">
+                  <label class="form-label">Payment Method</label>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger flex-grow-1 active" data-payment="Cash">
+                      <i class="fas fa-money-bill mb-1"></i>
+                      <div class="small">Cash</div>
+                    </button>
+                    <button class="btn btn-outline-danger flex-grow-1" data-payment="GCash">
+                      <i class="fas fa-mobile-alt mb-1"></i>
+                      <div class="small">GCash</div>
+                    </button>
+                    <button class="btn btn-outline-danger flex-grow-1" data-payment="Maya">
+                      <i class="fas fa-credit-card mb-1"></i>
+                      <div class="small">Maya</div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Total and Checkout (Footer) -->
+                <div class="cart-footer mt-3 border-top pt-3">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Total</h5>
+                    <h5 class="mb-0 text-danger" id="cartTotal">₱0.00</h5>
+                  </div>
+                  <button class="btn btn-danger w-100" id="checkoutBtn">CHECKOUT</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Bootstrap Modal for Menu Items -->
+  <div class="modal fade" id="menuItemModal" tabindex="-1" aria-labelledby="menuItemModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="menuItemModalLabel">Product Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" tabindex="-1"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <img src="" alt="" class="img-fluid rounded" id="modalItemImage" style="max-height: 200px; width: auto; object-fit: cover;">
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0" id="modalItemPrice">₱0.00</h5>
+            <div class="input-group" style="width: 120px;">
+              <button class="btn btn-outline-secondary" type="button" id="decreaseQuantity">-</button>
+              <input type="number" class="form-control text-center" id="modalQuantity" value="1" min="1">
+              <button class="btn btn-outline-secondary" type="button" id="increaseQuantity">+</button>
+            </div>
+          </div>
+
+          <!-- Ingredient Customization (available for all menu items) -->
+          <div id="addOnsSection" class="mb-4">
+            <div class="d-flex align-items-center mb-3">
+              <i class="fas fa-utensils text-danger me-2"></i>
+              <h6 class="mb-0 fw-bold text-dark">Customize Your Order</h6>
+            </div>
+            
+            <!-- Ingredient Removal Section -->
+            <div class="mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-warning bg-opacity-10 rounded-3 border border-warning border-opacity-25" 
+                   data-bs-toggle="collapse" 
+                   data-bs-target="#ingredientsCollapse" 
+                   aria-expanded="true" 
+                   aria-controls="ingredientsCollapse"
+                   style="cursor: pointer;">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-minus-circle text-warning me-2"></i>
+                  <h6 class="mb-0 fw-bold text-dark">Remove Ingredients</h6>
+                  <small class="text-muted ms-2">(Check to remove)</small>
+                </div>
+                <i class="fas fa-chevron-down text-warning" id="ingredientsChevron"></i>
+              </div>
+            
+              <div class="collapse show" id="ingredientsCollapse">
+                <div class="row g-2" id="ingredientsGrid">
+                  <!-- Ingredients will be loaded here -->
+                </div>
+              </div>
+            </div>
+            
+            <!-- Add-ons Section -->
+            <div class="mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25" 
+                   data-bs-toggle="collapse" 
+                   data-bs-target="#addOnsCollapse" 
+                   aria-expanded="true" 
+                   aria-controls="addOnsCollapse"
+                   style="cursor: pointer;">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-plus-circle text-success me-2"></i>
+                  <h6 class="mb-0 fw-bold text-dark">Add Extras</h6>
+                  <small class="text-muted ms-2">(Check to add)</small>
+                </div>
+                <i class="fas fa-chevron-down text-success" id="addOnsChevron"></i>
+              </div>
+              
+              <div class="collapse show" id="addOnsCollapse">
+                <div class="row g-2" id="addOnsGrid">
+                  <!-- Add-ons will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+          <!-- Total Price -->
+          <div class="border-top pt-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">Total Price:</h6>
+              <h5 class="mb-0 text-danger" id="modalTotalPrice">₱0.00</h5>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="addToCartBtn">
+            <i class="fas fa-cart-plus me-2"></i>Add to Cart
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Confirmation Modal -->
+  <div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Order</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" tabindex="-1"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <p class="text-muted mb-1">Order Type:</p>
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas" id="orderTypeIcon"></i>
+              <span class="fw-semibold" id="orderTypeText"></span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <p class="text-muted mb-1">Payment Method:</p>
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas" id="paymentMethodIcon"></i>
+              <span class="fw-semibold" id="paymentMethodText"></span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <p class="text-muted mb-1">Total Amount:</p>
+            <h4 class="text-danger mb-0" id="paymentTotal"></h4>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmOrderBtn">Confirm Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Config JS (must be loaded first) -->
+  <script src="../js/config.js"></script>
+  <!-- Custom JS -->
+  <script src="../js/pos.js"></script>
+
+  <script>
+    // Sidebar toggle functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarMenu = document.getElementById('sidebarMenu');
+      const closeSidebar = document.getElementById('closeSidebar');
+      const body = document.body;
+
+      // Toggle sidebar on button click
+      if (sidebarToggle && sidebarMenu) {
+        sidebarToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          sidebarMenu.classList.toggle('show');
+          body.classList.toggle('sidebar-open');
+        });
+      }
+      
+      // Close sidebar on close button click
+      if (closeSidebar && sidebarMenu) {
+        closeSidebar.addEventListener('click', function() {
+          sidebarMenu.classList.remove('show');
+          body.classList.remove('sidebar-open');
+        });
+      }
+      
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', function(e) {
+        if (window.innerWidth < 768 && 
+            sidebarMenu && 
+            sidebarMenu.classList.contains('show') && 
+            !sidebarMenu.contains(e.target) && 
+            !sidebarToggle.contains(e.target)) {
+          sidebarMenu.classList.remove('show');
+          body.classList.remove('sidebar-open');
+        }
+      });
+
+      // Handle window resize
+      function handleResize() {
+        if (window.innerWidth >= 768) {
+          sidebarMenu.classList.remove('show');
+          body.classList.remove('sidebar-open');
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+    });
+  </script>
+</body>
+</html>

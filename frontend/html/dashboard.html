@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RamenXpress Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="../css/dashboard.css" rel="stylesheet">
+
+</head>
+<body class="bg-light">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" id="sidebarToggle">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+        Ramen App
+      </a>
+      <div class="d-flex align-items-center ms-auto">
+        <div class="dropdown me-3">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none position-relative" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-bell fs-4"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.5rem; padding: 0.25em 0.4em;">
+              3
+            </span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="notificationDropdown" style="min-width: 320px; max-height: 400px; overflow-y: auto;">
+            <li class="dropdown-header bg-light border-bottom">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Notifications</h6>
+                <span class="badge bg-primary">3</span>
+              </div>
+            </li>
+            <li>
+              <a class="dropdown-item py-3 border-bottom" href="#">
+                <div class="d-flex">
+                  <div class="flex-shrink-0">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                      <i class="fas fa-shopping-cart text-primary"></i>
+                    </div>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <div class="fw-semibold text-dark">New Order #1234</div>
+                    <div class="text-muted small">Tonkotsu Ramen • Table 5</div>
+                    <div class="text-muted small">2 min ago</div>
+                  </div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-3 border-bottom" href="#">
+                <div class="d-flex">
+                  <div class="flex-shrink-0">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                      <i class="fas fa-exclamation-triangle text-warning"></i>
+                    </div>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <div class="fw-semibold text-dark">Low Stock Alert</div>
+                    <div class="text-muted small">Chicken • Only 5 pieces left</div>
+                    <div class="text-muted small">15 min ago</div>
+                  </div>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-3" href="#">
+                <div class="d-flex">
+                  <div class="flex-shrink-0">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                      <i class="fas fa-chart-line text-success"></i>
+                    </div>
+                  </div>
+                  <div class="flex-grow-1 ms-3">
+                    <div class="fw-semibold text-dark">Sales Update</div>
+                    <div class="text-muted small">Revenue up 8.5% today</div>
+                    <div class="text-muted small">1 hour ago</div>
+                  </div>
+                </div>
+              </a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item text-center py-2" href="#" style="background-color: #f8f9fa;">
+                <small class="text-primary fw-semibold">View All Notifications</small>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="dropdown">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2 border border-light" style="height: 40px; width: 40px; object-fit: cover;">
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="adminDropdown" style="min-width: 200px;">
+            <li class="dropdown-header d-flex align-items-center">
+              <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2" style="height: 32px; width: 32px; object-fit: cover;">
+              <div>
+                <div class="fw-bold text-dark">Admin User</div>
+                <small class="text-muted">admin@ramenxpress.com</small>
+              </div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="#">
+                <i class="fas fa-user me-2 text-primary"></i>
+                Profile
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="#">
+                <i class="fas fa-cog me-2 text-secondary"></i>
+                Settings
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center" href="#">
+                <i class="fas fa-question-circle me-2 text-info"></i>
+                Help & Support
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center text-danger" onclick="window.location.href='../login.html'">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark text-white collapse position-fixed">
+        <div class="position-sticky pt-3">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Menu</h4>
+            <button class="btn-close btn-close-white d-md-none" id="closeSidebar"></button>
+          </div>
+          <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+              <a href="../html/dashboard.html" class="nav-link text-white active bg-danger rounded">
+                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="../html/inventory.html" class="nav-link text-white">
+                <i class="fas fa-shopping-cart me-2"></i> Inventory
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="../html/reports.html" class="nav-link text-white">
+                <i class="fas fa-chart-bar me-2"></i> Reports
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-5">
+        <div class="dashboard-header shadow p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h2 class="mb-1">RamenXpress Dashboard</h2>
+              <p class="welcome-text mb-0">Welcome back! Here's what's happening with your restaurant today.</p>
+            </div>
+            <div class="text-end">
+              <div class="text-white-50 small">Today</div>
+              <div class="text-white fw-bold" id="currentDate"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Top Cards -->
+        <div class="row g-3 mb-4">
+          <!-- Total Sales -->
+          <div class="col-12 col-sm-6 col-lg-4">
+            <div class="bg-white rounded-4 shadow p-3 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fw-semibold">Total Sales</span>
+                <i class="fas fa-dollar-sign text-primary fs-3"></i>
+              </div>
+              <h4 class="fw-bold mb-2">40,689</h4>
+              <span class="text-success small fw-semibold">
+                <i class="fas fa-arrow-up me-1"></i>8.5% Up from yesterday
+              </span>
+            </div>
+          </div>
+
+          <!-- Total Orders -->
+          <div class="col-12 col-sm-6 col-lg-4">
+            <div class="bg-white rounded-4 shadow p-4 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fw-semibold">Total Orders</span>
+                <i class="fas fa-shopping-bag text-warning fs-3"></i>
+              </div>
+              <h4 class="fw-bold mb-2">10,293</h4>
+              <span class="text-success small fw-semibold">
+                <i class="fas fa-arrow-up me-1"></i>1.3% Up from past week
+              </span>
+            </div>
+          </div>
+
+          <!-- New Customers -->
+          <div class="col-12 col-sm-6 col-lg-4">
+            <div class="bg-white rounded-4 shadow p-4 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted fw-semibold">New Customers</span>
+                <i class="fas fa-user-plus text-success fs-3"></i>
+              </div>
+              <h4 class="fw-bold mb-2">100</h4>
+              <span class="text-muted small">This month</span>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Main Content Grid -->
+        <div class="row g-4">
+          <!-- Sales Details (Line Chart) -->
+          <div class="col-12 col-lg-8">
+            <div class="card shadow rounded-4 p-3">
+              <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <h3 class="fw-bold mb-0">Sales Details</h3>
+                <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#salesDetailsModal">
+                  More Details
+                </button>
+              </div>
+              <div class="bg-light rounded-3 p-2">
+                <canvas id="salesChart" class="w-100" style="max-height:220px;"></canvas>
+              </div>
+            </div>
+            <div class="card shadow rounded-4 p-3 mt-4">
+              <h4 class="fw-bold mb-2">Product Sales</h4>
+              <div class="bg-light rounded-3 p-2">
+                <canvas id="barChart" class="w-100" style="max-height:120px;"></canvas>
+              </div>
+            </div>
+            
+            <!-- Customer Feedback Quick Summary -->
+            <div class="card shadow rounded-4 p-3 mt-4 mb-5">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">
+                  <i class="fas fa-star text-warning me-2"></i>Customer Feedback
+                </h4>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#feedbackManagementModal">
+                  <i class="fas fa-chart-bar me-1"></i>View All Feedback
+                </button>
+              </div>
+              
+              <!-- Quick Summary Cards -->
+              <div class="row g-3 mb-3">
+                <div class="col-6 col-md-3">
+                  <div class="text-center p-1 bg-light rounded-3">
+                    <div class="display-6 fw-bold text-warning" id="quickAverageRating">4.2</div>
+                    <div class="text-muted small">Average Rating</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="text-center p-1 bg-light rounded-3">
+                    <div class="display-6 fw-bold text-primary" id="quickTotalFeedback">127</div>
+                    <div class="text-muted small">Total Reviews</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="text-center p-1 bg-light rounded-3">
+                    <div class="display-6 fw-bold text-success" id="quickPositiveFeedback">89%</div>
+                    <div class="text-muted small">Positive</div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="text-center p-1 bg-light rounded-3">
+                    <div class="display-6 fw-bold text-info" id="quickResponseRate">95%</div>
+                    <div class="text-muted small">Response Rate</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Recent Feedback Preview -->
+              <div class="recent-feedback-preview" id="recentFeedbackPreview">
+                <!-- Recent feedback preview will be loaded here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div class="col-12 col-lg-4">
+            <div class="card shadow rounded-4 p-3 mb-4">
+              <h4 class="fw-bold mb-2">Order Types</h4>
+              <div class="bg-light rounded-3 p-2 d-flex align-items-center justify-content-center">
+                <canvas id="pieChart" class="w-100" style="max-height:140px; max-width:220px;"></canvas>
+              </div>
+            </div>
+            
+            
+            <div class="card shadow rounded-4 p-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="fw-bold mb-0">Low Quantity Stock</h4>
+                <a href="#" class="text-primary small">See All</a>
+              </div>
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom">
+                  Eggs <span class="text-danger fw-bold">Low</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom">
+                  Chicken <span class="text-danger fw-bold">Low</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom">
+                  Onions <span class="text-danger fw-bold">Low</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom">
+                  Rice <span class="text-danger fw-bold">Low</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center border-0">
+                  Nori <span class="text-danger fw-bold">Low</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Sales Details Modal -->
+  <div class="modal fade" id="salesDetailsModal" tabindex="-1" aria-labelledby="salesDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="salesDetailsModalLabel">
+            <i class="fas fa-chart-line me-2"></i>Detailed Sales Report
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-12">
+              <h6 class="fw-bold text-primary mb-3">Sales Summary</h6>
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h4 class="text-success mb-1">₱40,689</h4>
+                      <small class="text-muted">Total Sales</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h4 class="text-warning mb-1">10,293</h4>
+                      <small class="text-muted">Total Orders</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h4 class="text-info mb-1">₱3.95</h4>
+                      <small class="text-muted">Avg Order Value</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center p-3">
+                      <h4 class="text-danger mb-1">8.5%</h4>
+                      <small class="text-muted">Growth Rate</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Close
+          </button>
+          <button type="button" class="btn btn-primary">
+            <i class="fas fa-download me-1"></i>Export Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Feedback Management Modal -->
+  <div class="modal fade" id="feedbackManagementModal" tabindex="-1" aria-labelledby="feedbackManagementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg mt-5">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <div class="d-flex align-items-center">
+            <h5 class="modal-title mb-0" id="feedbackManagementModalLabel">
+              <i class="fas fa-chart-bar me-2"></i>Customer Feedback Management
+            </h5>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-light btn-sm" onclick="refreshFeedback()">
+              <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <button class="btn btn-outline-light btn-sm" onclick="exportFeedback()">
+              <i class="fas fa-download me-1"></i>Export
+            </button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+
+          <!-- Filter and Search Controls -->
+          <div class="row g-1 mb-2">
+            <div class="col-md-3">
+              <label for="ratingFilter" class="form-label">Filter by Rating</label>
+              <select class="form-select" id="ratingFilter" onchange="filterFeedback()">
+                <option value="">All Ratings</option>
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="foodRatingFilter" class="form-label">Filter by Food Rating</label>
+              <select class="form-select" id="foodRatingFilter" onchange="filterFeedback()">
+                <option value="">All Food Ratings</option>
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="categoryFilter" class="form-label">Filter by Category</label>
+              <select class="form-select" id="categoryFilter" onchange="filterFeedback()">
+                <option value="">All Categories</option>
+                <option value="food_quality">Food Quality</option>
+                <option value="service">Service</option>
+                <option value="ambiance">Ambiance</option>
+                <option value="value_for_money">Value for Money</option>
+                <option value="speed">Speed of Service</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="searchFeedback" class="form-label">Search</label>
+              <input type="text" class="form-control" id="searchFeedback" placeholder="Search feedback..." onkeyup="filterFeedback()">
+            </div>
+          </div>
+
+          <!-- Two Column Layout -->
+          <div class="row">
+            <!-- Left Column - Rating Summary and Chart -->
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">Rating Summary</h6>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <div class="text-center p-2 bg-light rounded-3">
+                    <div class="h4 fw-bold text-warning" id="modalAverageRating">4.2</div>
+                    <div class="text-muted small">Average Rating</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center p-2 bg-light rounded-3">
+                    <div class="h4 fw-bold text-primary" id="modalTotalFeedback">127</div>
+                    <div class="text-muted small">Total Reviews</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center p-2 bg-light rounded-3">
+                    <div class="h4 fw-bold text-success" id="modalPositiveFeedback">89%</div>
+                    <div class="text-muted small">Positive</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center p-2 bg-light rounded-3">
+                    <div class="h4 fw-bold text-info" id="modalResponseRate">95%</div>
+                    <div class="text-muted small">Response Rate</div>
+                  </div>
+                </div>
+              </div>
+              
+              <h6 class="fw-bold mb-1">Rating Distribution</h6>
+              <div class="bg-light rounded-3 p-2">
+                <canvas id="modalFeedbackChart" class="w-100" style="max-height:200px;"></canvas>
+              </div>
+            </div>
+            
+            <!-- Right Column - All Feedback -->
+            <div class="col-md-6">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0">All Feedback</h6>
+                <span class="badge bg-info">View Only - Admin</span>
+              </div>
+              <div class="feedback-list" id="modalFeedbackList" style="max-height: 400px; overflow-y: auto;">
+                <!-- Feedback items will be loaded here as Bootstrap cards -->
+              </div>
+            </div>
+          </div>
+          
+          <style>
+            .feedback-rating {
+              display: flex;
+              gap: 0.125rem;
+            }
+            
+            .feedback-rating .star {
+              color: #ffc107;
+              font-size: 0.875rem;
+            }
+            
+            .feedback-rating .star.empty {
+              color: #e9ecef;
+            }
+          </style>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Close
+          </button>
+          <button type="button" class="btn btn-primary" onclick="exportFeedback()">
+            <i class="fas fa-download me-1"></i>Export Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+<!-- Bootstrap JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Your Chart JS -->
+<script src="../js/dashboard-charts.js"></script>
+<!-- Feedback System JavaScript -->
+<script src="../js/feedback.js"></script>
+<!-- Dashboard JavaScript -->
+<script src="../js/dashboard.js"></script>
+</html>

@@ -1,0 +1,1064 @@
+/* Global Reset and Base Styles */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  padding-top: 0;
+}
+
+/* Fixed Navbar Styles */
+.navbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1050 !important;
+  height: 56px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Sidebar Styles */
+#sidebarMenu {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  height: calc(100vh - 56px);
+  width: 250px;
+  background-color: #343a40;
+  overflow-y: auto;
+  z-index: 1040;
+  transition: transform 0.3s ease;
+  transform: translateX(-100%);
+  will-change: transform;
+}
+
+/* Desktop Sidebar - Always Visible */
+@media (min-width: 768px) {
+  #sidebarMenu {
+    transform: translateX(0);
+  }
+}
+
+/* Mobile Sidebar - Toggle Visibility */
+@media (max-width: 767.98px) {
+  #sidebarMenu {
+    width: 280px;
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  #sidebarMenu.show {
+    transform: translateX(0);
+  }
+}
+
+/* Main Content Styles */
+.main-content {
+  margin-top: 56px;
+  padding: 1.5rem;
+  min-height: calc(100vh - 56px);
+  background-color: #f8f9fa;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Desktop Main Content - Account for Sidebar */
+@media (min-width: 768px) {
+  .main-content {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+  }
+}
+
+/* Mobile Main Content - Full Width */
+@media (max-width: 767.98px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 1rem;
+  }
+}
+
+/* Container Fluid Reset */
+.container-fluid {
+  padding-top: 0;
+}
+
+/* Sidebar Overlay for Mobile */
+@media (max-width: 767.98px) {
+  body.sidebar-open::before {
+    content: '';
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1030;
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* Menu Items Grid */
+#menuItemsGrid .card {
+transition: transform 0.2s ease;
+cursor: pointer;
+height: 100%;
+}
+
+#menuItemsGrid .card:hover {
+transform: translateY(-5px);
+}
+
+#menuItemsGrid .card img {
+height: 150px;
+width: 100%;
+object-fit: cover;
+border-radius: 0.375rem 0.375rem 0 0;
+}
+
+@media (max-width: 575.98px) {
+#menuItemsGrid .card img {
+  height: 120px;
+}
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+#menuItemsGrid .card img {
+  height: 130px;
+}
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+#menuItemsGrid .card img {
+  height: 140px;
+}
+}
+
+/* Cart Styles */
+#cartItems {
+flex: 1 1 auto;
+min-height: 100px;
+max-height: none;
+overflow-y: auto;
+min-height: 0;
+}
+
+@media (max-width: 991.98px) {
+.col-lg-4, .col-12.col-lg-4, .card.shadow-sm.h-100 {
+  height: auto;
+  max-height: none;
+}
+.card-body.d-flex.flex-column {
+  height: auto;
+}
+}
+
+/* Modal Styles */
+.modal-dialog {
+max-width: 500px;
+margin: 1.75rem auto;
+}
+
+@media (max-width: 575.98px) {
+.modal-dialog {
+  margin: 0.5rem;
+}
+}
+
+/* Button Styles */
+.btn-outline-danger:hover {
+color: white;
+}
+
+
+/* Input Group Styles */
+.input-group .btn-outline-secondary {
+border-color: #ced4da;
+}
+
+.input-group .btn-outline-secondary:hover {
+background-color: #e9ecef;
+color: #212529;
+}
+
+/* Card Styles */
+.card {
+border: none;
+border-radius: 0.5rem;
+}
+
+.card-header {
+border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Form Control Styles */
+.form-control:focus {
+border-color: #dc3545;
+box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+/* Add-ons Grid */
+#addOnsGrid .card {
+border: 1px solid #dee2e6;
+transition: all 0.2s ease;
+}
+
+#addOnsGrid .card:hover {
+border-color: #dc3545;
+}
+
+#addOnsGrid .card.selected {
+border-color: #dc3545;
+background-color: #fff5f5;
+}
+
+/* Spice Level Buttons */
+#spiceLevelSection .btn {
+min-width: 80px;
+}
+
+@media (max-width: 575.98px) {
+#spiceLevelSection .btn {
+  min-width: 70px;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+}
+}
+
+/* Cart Item Styles */
+.cart-item {
+padding: 0.75rem 0;
+border-bottom: 1px solid #dee2e6;
+}
+
+.cart-item:last-child {
+border-bottom: none;
+}
+
+/* Category Buttons */
+.d-flex.flex-wrap.gap-2.mb-2.overflow-auto {
+-ms-overflow-style: none;
+scrollbar-width: none;
+padding-bottom: 0.5rem;
+}
+
+.d-flex.flex-wrap.gap-2.mb-2.overflow-auto::-webkit-scrollbar {
+display: none;
+}
+
+/* Responsive Typography */
+@media (max-width: 575.98px) {
+h5 {
+  font-size: 1.1rem;
+}
+
+.btn {
+  font-size: 0.875rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+}
+}
+
+/* Animation Classes */
+.fade-enter {
+opacity: 0;
+}
+
+.fade-enter-active {
+opacity: 1;
+transition: opacity 200ms ease-in;
+}
+
+.fade-exit {
+opacity: 1;
+}
+
+.fade-exit-active {
+opacity: 0;
+transition: opacity 200ms ease-in;
+}
+
+/* Sticky Header */
+.sticky-top {
+position: sticky;
+top: 0;
+z-index: 1030;
+background: white;
+}
+
+/* Order Type and Payment Method Buttons */
+@media (max-width: 575.98px) {
+.btn-outline-danger .small {
+  font-size: 0.75rem;
+}
+
+.btn-outline-danger i {
+  font-size: 0.875rem;
+}
+}
+
+/* Modal Content */
+.modal-content {
+border-radius: 0.5rem;
+}
+
+.modal-header {
+border-top-left-radius: 0.5rem;
+border-top-right-radius: 0.5rem;
+}
+
+/* Cart Total */
+#cartTotal {
+font-size: 1.25rem;
+}
+
+@media (max-width: 575.98px) {
+#cartTotal {
+  font-size: 1.1rem;
+}
+}
+
+/* Category Container */
+.category-container {
+position: static;
+background: white;
+z-index: 1;
+padding: 0.5rem 0;
+border-bottom: 1px solid #dee2e6;
+margin-bottom: 1rem;
+}
+
+.category-container .d-flex {
+-ms-overflow-style: none;
+scrollbar-width: none;
+padding-bottom: 0.5rem;
+margin-bottom: 0 !important;
+}
+
+.category-container .d-flex::-webkit-scrollbar {
+display: none;
+}
+
+.category-container .btn {
+white-space: nowrap;
+flex-shrink: 0;
+}
+
+/* Menu Items Container */
+.menu-items-container {
+position: relative;
+padding-top: 1rem;
+margin-top: 0;
+z-index: 1;
+}
+
+#menuItemsGrid {
+position: relative;
+z-index: 1;
+}
+
+#menuItemsGrid .card {
+transition: transform 0.2s ease;
+cursor: pointer;
+height: 100%;
+margin-bottom: 1rem;
+background: white;
+}
+
+#menuItemsGrid .card:hover {
+transform: translateY(-5px);
+}
+
+#menuItemsGrid .card img {
+height: 150px;
+width: 100%;
+object-fit: cover;
+border-radius: 0.375rem 0.375rem 0 0;
+}
+
+@media (max-width: 575.98px) {
+.category-container {
+  padding: 0.25rem 0;
+  margin-bottom: 0.5rem;
+  top: unset;
+}
+
+.category-container .btn {
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.menu-items-container {
+  padding-top: 0.5rem;
+  margin-top: 0;
+}
+
+#menuItemsGrid .card {
+  margin-bottom: 0.5rem;
+}
+}
+
+/* Remove sticky-top from search bar, keep only background and shadow */
+.bg-white.pb-2.px-2.sm\:px-4.pt-4.shadow-sm.rounded-b-lg {
+position: static !important;
+z-index: auto !important;
+}
+
+/* Cart Section Full Height */
+.col-lg-4, .col-12.col-lg-4 {
+display: flex;
+flex-direction: column;
+height: 100%;
+}
+
+.card.shadow-sm.h-100 {
+flex: 1 1 auto;
+display: flex;
+flex-direction: column;
+height: 100%;
+}
+
+.card-body.d-flex.flex-column {
+display: flex;
+flex-direction: column;
+height: 100%;
+min-height: 0;
+}
+
+/* Order Type & Payment Method Buttons Smaller */
+.d-flex.gap-2 > .btn[data-order-type],
+.d-flex.gap-2 > .btn[data-payment] {
+padding: 0.25rem 0.25rem;
+font-size: 0.85rem;
+min-width: 0;
+flex-basis: 0;
+flex-grow: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+}
+
+.d-flex.gap-2 > .btn[data-order-type] i,
+.d-flex.gap-2 > .btn[data-payment] i {
+font-size: 1rem;
+margin-bottom: 0.1rem;
+}
+
+.d-flex.gap-2 > .btn[data-order-type] .small,
+.d-flex.gap-2 > .btn[data-payment] .small {
+font-size: 0.8rem;
+}
+
+@media (max-width: 575.98px) {
+.d-flex.gap-2 > .btn[data-order-type],
+.d-flex.gap-2 > .btn[data-payment] {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.15rem;
+}
+.d-flex.gap-2 > .btn[data-order-type] i,
+.d-flex.gap-2 > .btn[data-payment] i {
+  font-size: 0.9rem;
+}
+.d-flex.gap-2 > .btn[data-order-type] .small,
+.d-flex.gap-2 > .btn[data-payment] .small {
+  font-size: 0.7rem;
+}
+}
+
+/* Cart Sticky and Full Height */
+@media (min-width: 992px) {
+.col-lg-4, .col-12.col-lg-4 {
+  position: sticky;
+  top: 0;
+  height: 85vh;
+  max-height: 90vh;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+.card.shadow-sm.h-100 {
+  height: 100%;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.card-body.d-flex.flex-column {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+#cartItems {
+  flex: 1 1 auto;
+  min-height: 200px;
+  max-height: none;
+  overflow-y: auto;
+}
+}
+
+.cart-footer {
+flex-shrink: 0;
+background: white;
+box-shadow: 0 -2px 8px rgba(0,0,0,0.01);
+}
+
+/* Modal Image Styles */
+#addToCartModal .modal-body img {
+max-width: 100%;
+height: auto;
+border-radius: 0.5rem;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Image Fallback Styles */
+.card-img-top {
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+
+.card-img-top[src*="placeholder"] {
+  opacity: 0.7;
+}
+
+/* Responsive Image Container */
+.image-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+
+/* Add-on Card Styles */
+.addon-card {
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background-color: #fff;
+}
+
+.addon-card:hover {
+  border-color: #dc3545;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.15);
+}
+
+.addon-card.selected {
+  border-color: #dc3545;
+  background-color: #fff5f5;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
+.addon-card .form-check {
+  margin: 0;
+  padding: 0;
+}
+
+.addon-card .form-check-input {
+  margin-right: 0.5rem;
+}
+
+.addon-card .form-check-label {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #495057;
+}
+
+.addon-card .form-check-label i {
+  font-size: 1.25rem;
+  color: #6c757d;
+}
+
+.addon-card.selected .form-check-label {
+  color: #dc3545;
+}
+
+.addon-card.selected .form-check-label i {
+  color: #dc3545;
+}
+
+/* Ingredient Customization Design */
+.ingredient-card {
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.ingredient-card:hover {
+  border-color: #ffc107;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+  transform: translateY(-1px);
+}
+
+.ingredient-card.selected {
+  border-color: #dc3545;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+  transform: translateY(-1px);
+}
+
+.ingredient-content {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  position: relative;
+}
+
+.ingredient-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ingredient-icon i {
+  color: white;
+  font-size: 16px;
+}
+
+.ingredient-card:hover .ingredient-icon {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.ingredient-card.selected .ingredient-icon {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.ingredient-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ingredient-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 3px 0;
+  line-height: 1.2;
+  transition: all 0.3s ease;
+}
+
+.ingredient-status {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6c757d;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.ingredient-card.selected .ingredient-name {
+  color: #dc3545;
+  text-decoration: line-through;
+}
+
+.ingredient-card.selected .ingredient-status {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.ingredient-checkbox {
+  margin-left: 8px;
+}
+
+.ingredient-input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ffc107;
+}
+
+/* Enhanced Add-ons Design */
+.addon-card-modern {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.addon-card-modern:hover {
+  border-color: #28a745;
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.2);
+  transform: translateY(-2px);
+}
+
+.addon-card-modern.selected {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+  transform: translateY(-2px);
+}
+
+.addon-content {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  position: relative;
+}
+
+.addon-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(40, 167, 69, 0.2);
+}
+
+.addon-icon i {
+  color: white;
+  font-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.addon-card-modern:hover .addon-icon {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+}
+
+.addon-card-modern.selected .addon-icon {
+  background: linear-gradient(135deg, #155724 0%, #0f5132 100%);
+  box-shadow: 0 6px 12px rgba(21, 87, 36, 0.4);
+}
+
+.addon-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.addon-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+  transition: all 0.3s ease;
+}
+
+.addon-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #28a745;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.addon-card-modern.selected .addon-name {
+  color: #155724;
+}
+
+.addon-card-modern.selected .addon-price {
+  color: #0f5132;
+}
+
+.addon-checkbox {
+  margin-left: 8px;
+}
+
+.addon-input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #28a745;
+}
+
+/* Collapsible Section Headers */
+.collapse-header {
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.collapse-header:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.collapse-header:active {
+  transform: translateY(0);
+}
+
+.collapse-chevron {
+  transition: transform 0.3s ease;
+}
+
+/* Add-ons Section Header */
+#addOnsSection .d-flex {
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #dc3545;
+}
+
+#addOnsSection h6 {
+  color: #495057;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#addOnsSection i {
+  font-size: 14px;
+}
+
+/* Collapse Animation Enhancements */
+.collapse {
+  transition: height 0.35s ease;
+}
+
+.collapsing {
+  height: 0;
+  overflow: hidden;
+  transition: height 0.35s ease;
+}
+
+/* Custom scrollbar for collapsed content */
+.collapse .row {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.collapse .row::-webkit-scrollbar {
+  width: 4px;
+}
+
+.collapse .row::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+.collapse .row::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.collapse .row::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Spice Level Button Styles */
+.spice-level {
+  transition: all 0.2s ease;
+  border-width: 2px;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+}
+
+.spice-level:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.spice-level.active {
+  border-width: 2px;
+  font-weight: bold;
+}
+
+.spice-level[data-level="mild"].active {
+  background-color: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.spice-level[data-level="medium"].active {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.spice-level[data-level="hot"].active {
+  background-color: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.spice-level i {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Modal Styles */
+.modal-content {
+  border-radius: 0.75rem;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  border-bottom: 2px solid #f8f9fa;
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 2px solid #f8f9fa;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+/* Modal Image Styles */
+#menuItemModal .modal-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Quantity Input Styles */
+#modalQuantity {
+  text-align: center;
+  font-weight: bold;
+  border: 1px solid #ced4da;
+}
+
+#modalQuantity:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Special Instructions Textarea */
+#specialInstructions {
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  resize: vertical;
+}
+
+#specialInstructions:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Modal Total Price */
+#modalTotalPrice {
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+/* Responsive Modal */
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .modal-header {
+    padding: 1rem 1rem 0.5rem;
+  }
+  
+  .modal-footer {
+    padding: 0.5rem 1rem 1rem;
+  }
+  
+  .addon-card .form-check-label {
+    font-size: 0.8rem;
+  }
+  
+  .addon-card .form-check-label i {
+    font-size: 1rem;
+  }
+  
+  .spice-level {
+    min-width: 70px;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .spice-level i {
+    font-size: 1rem;
+  }
+}
+
+/* Menu Item Click Styles */
+#menuItemsGrid .card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#menuItemsGrid .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Animation */
+.modal.fade .modal-dialog {
+  transition: transform 0.3s ease-out;
+  transform: translate(0, -50px);
+}
+
+.modal.show .modal-dialog {
+  transform: none;
+}
+
+/* Add to Cart Button */
+#addToCartBtn {
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.75rem 1.5rem;
+}
+
+#addToCartBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Form Label Styles */
+.form-label.fw-bold {
+  color: #495057;
+  margin-bottom: 0.75rem;
+}
+
+/* Checkbox Styles */
+.form-check-input:checked {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.form-check-input:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+} 

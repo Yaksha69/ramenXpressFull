@@ -1,0 +1,577 @@
+/* Global Reset and Base Styles */
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+}
+
+/* Hide scrollbars but keep scroll functionality */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  padding-top: 0;
+}
+
+/* Fixed Navbar Styles */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1040;
+  height: 56px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Main Content Adjustment for Fixed Navbar */
+main {
+  margin-top: 0px;
+  min-height: calc(100vh - 56px);
+  background-color: #f8f9fa;
+  padding-top: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Sidebar Styles */
+#sidebarMenu {
+  min-height: calc(100vh - 56px);
+  background-color: #343a40;
+  position: sticky;
+  top: 56px;
+  z-index: 1020;
+  padding-top: 1rem;
+}
+
+/* Mobile Sidebar Overlay */
+@media (max-width: 767.98px) {
+  #sidebarMenu {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1030;
+    background-color: #343a40;
+  }
+  
+  #sidebarMenu:not(.show) {
+    display: none !important;
+  }
+  
+  #sidebarMenu.show {
+    display: block !important;
+  }
+}
+
+/* Sidebar Overlay for Mobile */
+@media (max-width: 767.98px) {
+  body.sidebar-open::before {
+    content: '';
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1030;
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* Mobile navbar adjustments */
+@media (max-width: 767.98px) {
+  .navbar-brand {
+    font-size: 1rem;
+  }
+  
+  .navbar .dropdown-menu {
+    min-width: 280px;
+  }
+  
+  /* Mobile sidebar overlay */
+  body.sidebar-open::before {
+    content: '';
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1029;
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* Desktop adjustments */
+@media (min-width: 768px) {
+  /* Hide mobile close button on desktop */
+  #closeSidebar {
+    display: none !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .main-content {
+    padding: 1rem;
+  }
+  
+  .dashboard-header {
+    padding: 1rem;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Large screen adjustments */
+@media (min-width: 1200px) {
+  .main-content {
+    padding: 2rem;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 575.98px) {
+  .navbar-brand {
+    font-size: 0.9rem;
+  }
+  
+  .navbar-brand img {
+    height: 32px !important;
+    width: 32px !important;
+  }
+  
+  .dashboard-header {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .dashboard-header .welcome-text {
+    font-size: 0.9rem;
+  }
+  
+  /* Summary cards on mobile */
+  .summary-card {
+    margin-bottom: 1rem;
+  }
+  
+  .summary-card .stat {
+    font-size: 1.5rem;
+  }
+  
+  /* Table responsiveness */
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .btn-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+  }
+  
+  /* Modal adjustments */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 375px) {
+  .navbar-brand {
+    font-size: 0.8rem;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .summary-card .stat {
+    font-size: 1.25rem;
+  }
+}
+
+/* Optimize for Performance - Simplified approach */
+#sidebarMenu, .navbar {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Remove will-change and contain properties that might cause lag */
+.main-content {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Dashboard Header Styling */
+.main-content h2 {
+  margin-top: 56px;
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: 0;
+}
+
+.main-content .text-muted {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Dashboard Welcome Section */
+.dashboard-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
+  padding: 1.5rem;
+  color: white;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header h2 {
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header .welcome-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+}
+
+/* Modal Backdrop Adjustment */
+.modal-backdrop {
+  z-index: 1040;
+}
+
+/* Ensure modal is above the backdrop */
+.modal {
+  z-index: 1050;
+}
+
+/* Modal Content Styling */
+.modal-content {
+  border-radius: 1rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  border: none;
+}
+
+/* Modal Header */
+.modal-header {
+  background-color: #dc3545; /* Bootstrap's Danger color */
+  color: #fff;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+/* Modal Title */
+.modal-title {
+  font-weight: 600;
+  font-size: 1.3rem;
+}
+
+/* Modal Body Styling */
+.modal-body {
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+.modal-body p {
+  margin-bottom: 0.8rem;
+}
+
+/* Modal Body Labels */
+.modal-body strong {
+  display: inline-block;
+  min-width: 120px;
+  color: #555;
+}
+
+/* Modal Footer */
+.modal-footer {
+  background-color: #f8f9fa;
+  border-bottom-left-radius: 1rem;
+  border-bottom-right-radius: 1rem;
+}
+
+/* Close Button */
+.btn-secondary {
+  background-color: #6c757d;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.4rem 1rem;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+/* Transaction Badge Styling */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+}
+
+.badge.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.badge.bg-success {
+  background-color: #28a745 !important;
+}
+
+/* Table Styling */
+.table th {
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+  vertical-align: middle;
+  color: #495057;
+}
+
+/* Sortable Column Styling */
+.sortable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sortable:hover {
+  background-color: #f8f9fa;
+}
+
+/* Summary Cards Enhancement */
+.summary-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Search and Filter Enhancement */
+.input-group-text {
+  background-color: #f8f9fa;
+  border-color: #ced4da;
+}
+
+.form-control:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Loading State */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Error State */
+.text-danger {
+  color: #dc3545 !important;
+}
+
+/* Success State */
+.text-success {
+  color: #28a745 !important;
+}
+
+/* Pagination Styling */
+.pagination-container {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.pagination-info {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pagination {
+  margin-bottom: 0;
+}
+
+.pagination .page-link {
+  color: #dc3545;
+  border-color: #dee2e6;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+}
+
+.pagination .page-link:hover {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #6c757d;
+  background-color: transparent;
+  border-color: #dee2e6;
+}
+
+.pagination .page-item.disabled .page-link:hover {
+  background-color: transparent;
+  color: #6c757d;
+}
+
+/* Empty State Styling */
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Loading and Error States */
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+.fa-2x {
+  font-size: 2em;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Enhanced Date Picker Styles */
+.input-group .input-group-text {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  color: #6c757d;
+}
+
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Date picker specific styling */
+input[type="date"] {
+  position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Quick date range buttons */
+.date-range-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.date-range-btn {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.date-range-btn:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.date-range-btn.active {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+/* Icon-only button styling */
+.btn i {
+  font-size: 1rem;
+}
+
+.btn {
+  min-width: 40px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Button container alignment */
+.d-flex.justify-content-md-end {
+  align-items: center !important;
+}
+
+/* Ensure buttons stay in line with form controls */
+.d-flex.justify-content-md-end .btn {
+  margin-top: 0;
+}
+
+/* Responsive adjustments for date picker */
+@media (max-width: 768px) {
+  .date-range-buttons {
+    justify-content: center;
+  }
+  
+  .btn {
+    min-width: 36px;
+    height: 36px;
+  }
+}

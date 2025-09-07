@@ -1,0 +1,37 @@
+## Inventory
+
+### Get all inventory items
+GET http://localhost:3000/api/v1/inventory
+Headers:
+- Authorization: Bearer <token>
+
+### Get a single inventory item by ID
+GET http://localhost:3000/api/v1/inventory/{id}
+Headers:
+- Authorization: Bearer <token>
+
+### Create a new inventory item
+POST http://localhost:3000/api/v1/inventory
+Headers:
+- Content-Type: application/json
+- Authorization: Bearer <token>
+Body (JSON):
+{
+  "name": "Tonkotsu Ramen",
+  "stocks": 50,
+  "units": "bowl",
+  "restocked": "2024-05-01T00:00:00.000Z",
+  "status": "in stock"
+}
+
+### Update an inventory item
+PUT http://localhost:3000/api/v1/inventory/{id}
+Headers:
+- Content-Type: application/json
+- Authorization: Bearer <token>
+Body (JSON): (same as POST)
+
+### Delete an inventory item
+DELETE http://localhost:3000/api/v1/inventory/{id}
+Headers:
+- Authorization: Bearer <token>

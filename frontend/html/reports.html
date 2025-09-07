@@ -1,0 +1,436 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RamenXpress Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="../css/reports.css" rel="stylesheet">
+
+</head>
+<body class="bg-light">
+
+<script>
+  // Role-based access control for admin pages
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (!user.role || user.role !== 'admin') {
+    window.location.href = 'pos.html';
+  }
+</script>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top">
+  <div class="container-fluid">
+    <button class="navbar-toggler" type="button" id="sidebarToggle">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+      Ramen App
+    </a>
+    <div class="d-flex align-items-center ms-auto">
+      <div class="dropdown me-3">
+        <a href="#" class="d-flex align-items-center text-white text-decoration-none position-relative" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-bell fs-4"></i>
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.5rem; padding: 0.25em 0.4em;">
+            3
+          </span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="notificationDropdown" style="min-width: 320px; max-height: 400px; overflow-y: auto;">
+          <li class="dropdown-header bg-light border-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 fw-bold">Notifications</h6>
+              <span class="badge bg-primary">3</span>
+            </div>
+          </li>
+          <li>
+            <a class="dropdown-item py-3 border-bottom" href="#">
+              <div class="d-flex">
+                <div class="flex-shrink-0">
+                  <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="fas fa-shopping-cart text-primary"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <div class="fw-semibold text-dark">New Order #1234</div>
+                  <div class="text-muted small">Tonkotsu Ramen • Table 5</div>
+                  <div class="text-muted small">2 min ago</div>
+                </div>
+              </div>
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item py-3 border-bottom" href="#">
+              <div class="d-flex">
+                <div class="flex-shrink-0">
+                  <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <div class="fw-semibold text-dark">Low Stock Alert</div>
+                  <div class="text-muted small">Chicken • Only 5 pieces left</div>
+                  <div class="text-muted small">15 min ago</div>
+                </div>
+              </div>
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item py-3" href="#">
+              <div class="d-flex">
+                <div class="flex-shrink-0">
+                  <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="fas fa-chart-line text-success"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <div class="fw-semibold text-dark">Sales Update</div>
+                  <div class="text-muted small">Revenue up 8.5% today</div>
+                  <div class="text-muted small">1 hour ago</div>
+                </div>
+              </div>
+            </a>
+          </li>
+          <li class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item text-center py-2" href="#" style="background-color: #f8f9fa;">
+              <small class="text-primary fw-semibold">View All Notifications</small>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="dropdown">
+        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2 border border-light" style="height: 40px; width: 40px; object-fit: cover;">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="adminDropdown" style="min-width: 200px;">
+          <li class="dropdown-header d-flex align-items-center">
+            <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2" style="height: 32px; width: 32px; object-fit: cover;">
+            <div>
+              <div class="fw-bold text-dark">Admin User</div>
+              <small class="text-muted">admin@ramenxpress.com</small>
+            </div>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item d-flex align-items-center" href="#">
+              <i class="fas fa-user me-2 text-primary"></i>
+              Profile
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item d-flex align-items-center" href="#">
+              <i class="fas fa-cog me-2 text-secondary"></i>
+              Settings
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item d-flex align-items-center" href="#">
+              <i class="fas fa-question-circle me-2 text-info"></i>
+              Help & Support
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <button class="dropdown-item d-flex align-items-center text-danger" onclick="window.location.href='../login.html'">
+              <i class="fas fa-sign-out-alt me-2"></i>
+              Logout
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar -->
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark text-white collapse position-fixed">
+        <div class="position-sticky pt-3">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Menu</h4>
+            <button class="btn-close btn-close-white d-md-none" id="closeSidebar"></button>
+          </div>
+          <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+              <a href="../html/dashboard.html" class="nav-link text-white">
+                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="../html/inventory.html" class="nav-link text-white">
+                <i class="fas fa-shopping-cart me-2"></i> Inventory
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="../html/reports.html" class="nav-link text-white active bg-danger rounded">
+                <i class="fas fa-chart-bar me-2"></i> Reports
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 mt-5">
+        <div class="dashboard-header shadow p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h2 class="mb-1">Sales Reports</h2>
+              <p class="welcome-text mb-0">Comprehensive sales analytics and transaction details for your restaurant.</p>
+            </div>
+          </div>
+        </div>
+
+      <!-- Summary Cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="bg-white rounded-4 shadow p-3 summary-card">
+            <span class="text-primary mb-1">Total Sales</span>
+            <div class="stat mb-1">100,000</div>
+            <div class="desc">Date Range</div>
+          </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="bg-white rounded-4 shadow p-3 summary-card">
+            <span class="text-warning mb-1">Total Orders</span>
+            <div class="stat mb-1">14</div>
+            <div class="desc">Date Range</div>
+          </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="bg-white rounded-4 shadow p-3 summary-card">
+            <span class="text-purple mb-1">Order Type</span>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="stat">5</span>
+              <span class="stat">8</span>
+              <span class="stat">7</span>
+            </div>
+            <div class="d-flex justify-content-between desc">
+              <span>Dine In</span>
+              <span>Pick Up</span>
+              <span>Delivery</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="bg-white rounded-4 shadow p-3 summary-card">
+            <span class="text-danger mb-1">Maintenance</span>
+            <div class="stat mb-1" id="avgOrderValue">₱0</div>
+            <div class="desc">Per Transaction</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search and Filter -->
+      <div class="bg-white rounded-4 shadow p-4 mb-4">
+        <form class="row g-3 align-items-end" id="searchForm" onsubmit="return false;">
+          <div class="col-12 col-md-4 col-lg-3">
+            <label class="form-label mb-1">Search transactions</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-search"></i></span>
+              <input type="text" class="form-control" id="searchInput" placeholder="Search by ID, type, or items...">
+            </div>
+          </div>
+          <div class="col-12 col-md-3 col-lg-2">
+            <label class="form-label mb-1">Start Date</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+              <input type="date" class="form-control" id="filterStartDate">
+            </div>
+          </div>
+          <div class="col-12 col-md-3 col-lg-2">
+            <label class="form-label mb-1">End Date</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+              <input type="date" class="form-control" id="filterEndDate">
+            </div>
+          </div>
+          <div class="col-12 col-md-3 col-lg-2">
+            <label class="form-label mb-1">Order Type</label>
+            <select class="form-select" id="filterOrderType">
+              <option value="">All Types</option>
+              <option value="dine-in">Dine In</option>
+              <option value="pickup">Pick Up</option>
+              <option value="delivery">Delivery</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-2 col-lg-3 d-flex justify-content-md-end align-items-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="refreshBtn" onclick="location.reload()" title="Refresh">
+              <i class="fas fa-sync-alt"></i>
+            </button>
+            <button type="button" class="btn btn-outline-primary" id="downloadBtn" title="Download">
+              <i class="fas fa-download"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Sales Table -->
+      <div class="bg-white rounded-4 shadow p-4 mb-5">
+        <div class="table-responsive">
+          <table class="table align-middle mb-0" id="salesTable">
+            <thead class="table-light">
+              <tr>
+                <th onclick="sortTable('id')" class="sortable">Transaction ID <i class="fas fa-sort ms-1"></i></th>
+                <th onclick="sortTable('type')" class="sortable">Order Type <i class="fas fa-sort ms-1"></i></th>
+                <th onclick="sortTable('items')" class="sortable">Items Count <i class="fas fa-sort ms-1"></i></th>
+                <th onclick="sortTable('price')" class="sortable">Total Price <i class="fas fa-sort ms-1"></i></th>
+                <th onclick="sortTable('date')" class="sortable">Date <i class="fas fa-sort ms-1"></i></th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="salesTableBody">
+              <!-- Data will be loaded here -->
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination will be dynamically created here -->
+      </div>
+
+    </main>
+    </div>
+  </div>
+
+  <!-- Transaction Details Modal -->
+  <div class="modal fade" id="salesDetailsModal" tabindex="-1" aria-labelledby="salesDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="salesDetailsModalLabel">
+            <i class="fas fa-receipt me-2"></i>Transaction Details
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="fw-bold text-primary mb-3">Order Information</h6>
+              <div class="card bg-light">
+                <div class="card-body">
+                  <div class="row mb-2">
+                    <div class="col-4"><strong>Transaction ID:</strong></div>
+                    <div class="col-8" id="modalTransactionId">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-4"><strong>Source:</strong></div>
+                    <div class="col-8" id="modalSource">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-4"><strong>Order Type:</strong></div>
+                    <div class="col-8" id="modalOrderType">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-4"><strong>Date:</strong></div>
+                    <div class="col-8" id="modalDate">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-4"><strong>Total Price:</strong></div>
+                    <div class="col-8" id="modalTotalPrice">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold text-primary mb-3">Order Items</h6>
+              <div class="card bg-light">
+                <div class="card-body">
+                  <div id="modalItems">
+                    <!-- Items will be populated by category here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- JS Files -->
+<script src="../js/config.js"></script>
+<script src="../js/reports.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // Wait for DOM to be fully loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarMenu = document.getElementById('sidebarMenu');
+    const closeSidebar = document.getElementById('closeSidebar');
+
+    // Initialize Bootstrap collapse
+    const collapse = new bootstrap.Collapse(sidebarMenu, {
+      toggle: false
+    });
+
+    // Mobile sidebar toggle
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (window.innerWidth < 768) {
+          if (sidebarMenu.classList.contains('show')) {
+            collapse.hide();
+            document.body.classList.remove('sidebar-open');
+          } else {
+            collapse.show();
+            document.body.classList.add('sidebar-open');
+          }
+        }
+      });
+    }
+    
+    // Close sidebar button
+    if (closeSidebar) {
+      closeSidebar.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        collapse.hide();
+        document.body.classList.remove('sidebar-open');
+      });
+    }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+      if (window.innerWidth < 768 && sidebarMenu.classList.contains('show')) {
+        if (!sidebarMenu.contains(e.target) && !sidebarToggle.contains(e.target)) {
+          collapse.hide();
+          document.body.classList.remove('sidebar-open');
+        }
+      }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+      if (window.innerWidth >= 768) {
+        collapse.hide();
+        document.body.classList.remove('sidebar-open');
+      }
+    });
+    
+    // Close sidebar when clicking on nav links on mobile
+    const navLinks = document.querySelectorAll('#sidebarMenu .nav-link');
+    navLinks.forEach(function(link) {
+      link.addEventListener('click', function() {
+        if (window.innerWidth < 768) {
+          collapse.hide();
+          document.body.classList.remove('sidebar-open');
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

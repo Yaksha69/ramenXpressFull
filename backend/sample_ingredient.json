@@ -1,0 +1,136 @@
+[
+    {
+      "name": "Pork Bones",
+      "category": "Broth",
+      "unit": "kg",
+      "stock": 30,
+      "low_stock_threshold": 2
+    },
+    {
+      "name": "Chicken Bones",
+      "category": "Broth",
+      "unit": "kg",
+      "stock": 45,
+      "low_stock_threshold": 2
+    },
+    {
+      "name": "Miso Paste",
+      "category": "Tare",
+      "unit": "kg",
+      "stock": 50,
+      "low_stock_threshold": 1
+    },
+    {
+      "name": "Soy Sauce",
+      "category": "Tare",
+      "unit": "L",
+      "stock": 45,
+      "low_stock_threshold": 2
+    },
+    {
+      "name": "Salt",
+      "category": "Tare",
+      "unit": "kg",
+      "stock": 45,
+      "low_stock_threshold": 1
+    },
+    {
+      "name": "Ramen Noodles",
+      "category": "Noodles",
+      "unit": "packs",
+      "stock": 50,
+      "low_stock_threshold": 10
+    },
+    {
+      "name": "Chashu Pork",
+      "category": "Toppings",
+      "unit": "slices",
+      "stock": 100,
+      "low_stock_threshold": 20
+    },
+    {
+      "name": "Marinated Egg",
+      "category": "Toppings",
+      "unit": "pcs",
+      "stock": 40,
+      "low_stock_threshold": 10
+    },
+    {
+      "name": "Nori",
+      "category": "Toppings",
+      "unit": "sheets",
+      "stock": 60,
+      "low_stock_threshold": 15
+    },
+    {
+      "name": "Green Onions",
+      "category": "Toppings",
+      "unit": "bunches",
+      "stock": 10,
+      "low_stock_threshold": 2
+    },
+    {
+      "name": "Corn",
+      "category": "Toppings",
+      "unit": "cups",
+      "stock": 20,
+      "low_stock_threshold": 5
+    },
+    {
+      "name": "Butter",
+      "category": "Toppings",
+      "unit": "g",
+      "stock": 500,
+      "low_stock_threshold": 100
+    },
+    {
+      "name": "Bean Sprouts",
+      "category": "Toppings",
+      "unit": "cups",
+      "stock": 70,
+      "low_stock_threshold": 3
+    },
+    {
+      "name": "Garlic",
+      "category": "Aromatics",
+      "unit": "bulbs",
+      "stock": 120,
+      "low_stock_threshold": 3
+    },
+    {
+      "name": "Ginger",
+      "category": "Aromatics",
+      "unit": "kg",
+      "stock": 85,
+      "low_stock_threshold": 1
+    },
+    {
+      "name": "Onions",
+      "category": "Aromatics",
+      "unit": "kg",
+      "stock": 55,
+      "low_stock_threshold": 1
+    },
+    {
+      "name": "Leeks",
+      "category": "Aromatics",
+      "unit": "pcs",
+      "stock": 62,
+      "low_stock_threshold": 2
+    },
+    {
+      "name": "Wood Ear Mushrooms",
+      "category": "Toppings",
+      "unit": "g",
+      "stock": 300,
+      "low_stock_threshold": 50
+    },
+    {
+      "name": "Sesame Seeds",
+      "category": "Toppings",
+      "unit": "g",
+      "stock": 200,
+      "low_stock_threshold": 50
+    }
+  ]
+  
