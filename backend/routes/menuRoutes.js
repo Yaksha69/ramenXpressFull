@@ -22,9 +22,6 @@ router.get('/all', menuController.getAllMenu);
 // Get menu items by category
 router.get('/category/:category', menuController.getMenuByCategory);
 
-// Get add-ons specifically
-router.get('/add-ons', menuController.getAddOns);
-
 // Get single menu item by ID
 router.get('/:id', menuController.getMenuById);
 

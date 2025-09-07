@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'email_verification_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,28 +23,126 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  void _showVerificationScreen(String email) async {
+    final api = ApiService();
+    
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 16),
+            Text('Sending verification code...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      // Send registration OTP for verification
+      await api.sendRegistrationOTP(email);
+      
+      // Clear any existing snackbars
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
+      // Navigate to verification screen using push instead of pushNamed
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationPage(
+              email: email,
+              purpose: 'login', // Changed from 'registration' to 'login'
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Clear loading snackbar
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send verification code: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      final api = ApiService();
+      
       try {
-        final email = _emailController.text.trim();
-        final password = _passwordController.text;
-        final api = ApiService();
+        // Try to login
         await api.login(email, password);
+        
+        // If login successful, go directly to home (no additional OTP needed)
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login failed: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          final errorMessage = e.toString().replaceAll('Exception: ', '');
+          
+          // Check if error is due to unverified email
+          if (errorMessage.contains('verify your email') || 
+              errorMessage.contains('requiresEmailVerification') ||
+              errorMessage.contains('Email not verified')) {
+            
+            // Show dialog asking if user wants to verify email
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Email Not Verified'),
+                  content: const Text('Your email address needs to be verified before you can login. Would you like to verify it now?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final email = _emailController.text.trim();
+                        Navigator.of(context).pop(); // Close dialog first
+                        
+                        // Show verification screen directly
+                        _showVerificationScreen(email);
+                      },
+                      child: const Text('Verify Email'),
+                    ),
+                  ],
+                );
+              },
+            );
+          } else {
+            // Show regular error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Login failed: $errorMessage'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
       } finally {
         if (mounted) {

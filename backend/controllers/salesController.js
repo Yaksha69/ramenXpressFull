@@ -13,33 +13,18 @@ const generateOrderID = async () => {
 };
 
 // Deduct ingredients from inventory
-const deductIngredients = async (menuItem, quantity, addOns, removedIngredients = []) => {
+const deductIngredients = async (menuItem, quantity, addOns) => {
     try {
-        // Create a map of removed ingredients for quick lookup
-        const removedMap = {};
-        removedIngredients.forEach(removed => {
-            removedMap[removed.inventoryItem] = removed.quantity;
-        });
-
-        // Deduct ingredients for main menu item (excluding removed ones)
+        // Deduct ingredients for main menu item
         for (const ingredient of menuItem.ingredients) {
             const inventoryItem = await Inventory.findOne({ name: ingredient.inventoryItem });
             if (inventoryItem) {
-                // Calculate quantity to deduct (original - removed)
-                const removedQuantity = removedMap[ingredient.inventoryItem] || 0;
-                const actualQuantity = Math.max(0, ingredient.quantity - removedQuantity);
-                const requiredQuantity = actualQuantity * quantity;
-                
-                if (requiredQuantity > 0) {
-                    if (inventoryItem.stocks >= requiredQuantity) {
-                        inventoryItem.stocks -= requiredQuantity;
-                        await inventoryItem.save();
-                        console.log(`Deducted ${requiredQuantity} ${ingredient.inventoryItem} (${ingredient.quantity} - ${removedQuantity} removed) × ${quantity}`);
-                    } else {
-                        throw new Error(`Insufficient stock for ${ingredient.inventoryItem}. Available: ${inventoryItem.stocks}, Required: ${requiredQuantity}`);
-                    }
+                const requiredQuantity = ingredient.quantity * quantity;
+                if (inventoryItem.stocks >= requiredQuantity) {
+                    inventoryItem.stocks -= requiredQuantity;
+                    await inventoryItem.save();
                 } else {
-                    console.log(`Skipped ${ingredient.inventoryItem} - fully removed by customer`);
+                    throw new Error(`Insufficient stock for ${ingredient.inventoryItem}. Available: ${inventoryItem.stocks}, Required: ${requiredQuantity}`);
                 }
             } else {
                 throw new Error(`Inventory item ${ingredient.inventoryItem} not found`);
@@ -74,7 +59,7 @@ const deductIngredients = async (menuItem, quantity, addOns, removedIngredients 
 // Create a new sale
 exports.createSale = async (req, res) => {
     try {
-        const { menuItem, quantity, addOns, removedIngredients, paymentMethod, serviceType } = req.body;
+        const { menuItem, quantity, addOns, paymentMethod, serviceType } = req.body;
         
         // Validate required fields
         if (!menuItem) {
@@ -121,32 +106,9 @@ exports.createSale = async (req, res) => {
                 });
             }
         }
-
-        // Process removed ingredients if any
-        const processedRemovedIngredients = [];
-        if (removedIngredients && Array.isArray(removedIngredients)) {
-            for (const removed of removedIngredients) {
-                // Validate that the ingredient exists in the menu item
-                const menuIngredient = menuItemDoc.ingredients.find(ing => ing.inventoryItem === removed.inventoryItem);
-                if (!menuIngredient) {
-                    return res.status(400).json({ message: `Ingredient ${removed.inventoryItem} is not part of this menu item` });
-                }
-                
-                // Validate removed quantity doesn't exceed what's in the menu item
-                if (removed.quantity > menuIngredient.quantity) {
-                    return res.status(400).json({ message: `Cannot remove more ${removed.inventoryItem} than what's in the menu item` });
-                }
-                
-                processedRemovedIngredients.push({
-                    inventoryItem: removed.inventoryItem,
-                    name: removed.name,
-                    quantity: removed.quantity
-                });
-            }
-        }
         
-        // Deduct ingredients from inventory (accounting for removed ingredients)
-        await deductIngredients(menuItemDoc, quantity, processedAddOns, processedRemovedIngredients);
+        // Deduct ingredients from inventory
+        await deductIngredients(menuItemDoc, quantity, processedAddOns);
         
         // Generate simple sequential order ID
         const orderID = await generateOrderID();
@@ -165,7 +127,6 @@ exports.createSale = async (req, res) => {
             quantity,
             price: menuItemDoc.price,
             addOns: processedAddOns,
-            removedIngredients: processedRemovedIngredients,
             paymentMethod,
             serviceType,
             totalAmount

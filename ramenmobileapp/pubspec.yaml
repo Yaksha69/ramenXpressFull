@@ -39,6 +39,8 @@ dependencies:
   http: ^1.1.0
   dio: ^5.3.2
   socket_io_client: ^2.0.3
+  lottie: ^3.1.2
+  pinput: ^5.0.2
 
 dev_dependencies:
   flutter_test:
@@ -85,6 +87,7 @@ flutter:
     - assets/coke.webp
     - assets/profiles.jpg
     - assets/profilesgg.png
+    - assets/animations/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

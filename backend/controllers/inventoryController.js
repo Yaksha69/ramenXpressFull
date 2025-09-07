@@ -7,25 +7,6 @@ const calculateDefaultStatus = (stocks) => {
   return 'in stock';
 };
 
-// Get ingredients for POS system
-exports.getIngredients = async (req, res) => {
-  try {
-    const ingredients = await Inventory.find({}, 'name units status stocks');
-    
-    res.status(200).json({
-      success: true,
-      count: ingredients.length,
-      data: ingredients
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching ingredients',
-      error: error.message
-    });
-  }
-};
-
 // Get all inventory items
 exports.getAllInventory = async (req, res) => {
   try {

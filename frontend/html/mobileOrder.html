@@ -25,7 +25,7 @@
       </button>
       <a class="navbar-brand d-flex align-items-center" href="#">
         <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
-        Ramen App
+        RamenXpress
       </a>
       <div class="d-flex align-items-center ms-auto">
         <img src="../assets/notif.png" alt="notif" class="rounded-circle me-2" style="height: 40px; width: 40px;">
@@ -187,16 +187,23 @@
               </div>
             </div>
           </div>
-          <!-- Pagination -->
-          <nav aria-label="Order pagination">
-            <ul class="pagination justify-content-center">
-              <li class="page-item disabled"><a class="page-link">Previous</a></li>
-              <li class="page-item active"><a class="page-link">1</a></li>
-              <li class="page-item"><a class="page-link">2</a></li>
-              <li class="page-item"><a class="page-link">3</a></li>
-              <li class="page-item"><a class="page-link">Next</a></li>
-            </ul>
-          </nav>
+          <!-- Pagination Controls -->
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+              <label for="pageSizeSelect" class="form-label me-2">Show:</label>
+              <select id="pageSizeSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="changePageSize(this.value)">
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <span class="ms-2 text-muted">entries</span>
+            </div>
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-center mb-0" id="paginationList">
+              </ul>
+            </nav>
+          </div>
         </div>
       
         

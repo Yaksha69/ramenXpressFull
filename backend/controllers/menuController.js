@@ -314,31 +314,11 @@ const getMenuByCategory = async (req, res) => {
   }
 };
 
-// Get add-ons specifically
-const getAddOns = async (req, res) => {
-  try {
-    const addOns = await Menu.find({ category: 'add-ons' });
-    
-    res.status(200).json({
-      success: true,
-      count: addOns.length,
-      data: addOns
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching add-ons',
-      error: error.message
-    });
-  }
-};
-
 module.exports = {
   getAllMenu,
   getMenuById,
   createMenu,
   updateMenu,
   deleteMenu,
-  getMenuByCategory,
-  getAddOns
+  getMenuByCategory
 };

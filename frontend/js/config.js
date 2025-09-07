@@ -7,15 +7,15 @@ const API_CONFIG = {
   BASE_URL: 'https://ramen-27je.onrender.com/api/v1',
   
   // Local API (for development)
-  LOCAL_BASE_URL: 'http://localhost:3000/api/v1',
+  LOCAL_BASE_URL: 'http://192.168.0.105:3000/api/v1',
   
   // Socket.IO URL (for real-time updates)
   SOCKET_URL: 'https://ramen-27je.onrender.com',
-  LOCAL_SOCKET_URL: 'http://localhost:3000',
+  LOCAL_SOCKET_URL: 'http://192.168.0.105:3000',
   
   // Upload URLs
   UPLOAD_BASE: 'https://ramen-27je.onrender.com',
-  LOCAL_UPLOAD_BASE: 'http://localhost:3000',
+  LOCAL_UPLOAD_BASE: 'http://192.168.0.105:3000',
   
   // Main application URL
   MAIN_APP_URL: 'https://ramen-27je.onrender.com'

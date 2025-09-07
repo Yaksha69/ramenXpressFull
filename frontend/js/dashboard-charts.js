@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
           datasets: [
             {
               label: 'Actual Sales',
-              data: [120, 180, 250, 300],
+              data: [120, 180, 250, 400, 200, 300, 350],
               borderColor: 'rgba(75, 192, 192, 1)',
               backgroundColor: 'rgba(75, 192, 192, 0.1)',
               tension: 0.4,
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
       new Chart(pieCtx, {
         type: 'pie',
         data: {
-          labels: ['Dine-in', 'take-out', 'Delivery'],
+          labels: ['Dine-in', 'Takeaway', 'Delivery'],
           datasets: [{
             data: [60, 30, 10],
             backgroundColor: [

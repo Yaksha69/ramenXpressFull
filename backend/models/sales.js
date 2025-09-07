@@ -37,21 +37,6 @@ const salesSchema = new mongoose.Schema({
             required: true
         }
     }],
-    removedIngredients: [{
-        inventoryItem: {
-            type: String,
-            required: true
-        },
-        name: {
-            type: String,
-            required: true
-        },
-        quantity: {
-            type: Number,
-            required: true,
-            min: 0
-        }
-    }],
     paymentMethod: {
         type: String,
         enum: ['cash', 'paymaya', 'gcash'],

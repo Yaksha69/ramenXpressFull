@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/socket_service.dart';
+import '../widgets/delivery_animation.dart';
 
 class InvoicePage extends StatefulWidget {
   final Map<String, dynamic> order;
@@ -71,7 +72,7 @@ class _InvoicePageState extends State<InvoicePage> {
       case 'preparing':
         return const Color(0xFF1A1A1A); // Black
       case 'ready':
-        return const Color.fromARGB(255, 185, 255, 73); // Green
+        return Colors.blue; // Blue
       case 'delivered':
         return const Color.fromARGB(255, 10, 180, 10); // Green
       case 'cancelled':
@@ -392,6 +393,28 @@ class _InvoicePageState extends State<InvoicePage> {
     );
   }
 
+  bool _shouldShowAnimation(String status) {
+    return status.toLowerCase() == 'ready' ||
+           status.toLowerCase() == 'out for delivery' || 
+           status.toLowerCase() == 'on the way';
+  }
+
+  String _getEstimatedTime(String status) {
+    switch (status.toLowerCase()) {
+      case 'preparing':
+        return '15-20 minutes';
+      case 'ready':
+        return '5-10 minutes';
+      case 'out for delivery':
+      case 'on the way':
+        return '10-15 minutes';
+      case 'delivered':
+        return 'Delivered';
+      default:
+        return 'Calculating...';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -433,6 +456,17 @@ class _InvoicePageState extends State<InvoicePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStatusBadge(order['status'] ?? 'pending'),
+            // Add Lottie animation for delivery status
+            if (_shouldShowAnimation(order['status'] ?? 'pending'))
+              DeliveryStatusWidget(
+                orderStatus: order['status'] ?? 'pending',
+                lottieAnimationPath: 'assets/animations/delivery_guy.json',
+                orderDetails: {
+                  'orderId': order['id'] ?? order['_id'],
+                  'estimatedTime': _getEstimatedTime(order['status'] ?? 'pending'),
+                  'deliveryAddress': order['deliveryAddress'],
+                },
+              ),
             _buildOrderProgress(order['status'] ?? 'pending'),
             _buildOrderDetails(),
             _buildPaymentDetails(),

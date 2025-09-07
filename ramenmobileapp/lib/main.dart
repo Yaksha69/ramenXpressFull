@@ -11,6 +11,9 @@ import 'pages/paymentmethod_page.dart';
 import 'pages/address_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/edit_payment_method_page.dart';
+import 'pages/splash_screen.dart';
+import 'pages/welcome_page.dart';
+import 'pages/email_verification_page.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -151,7 +154,38 @@ class MyApp extends StatelessWidget {
           indicatorColor: Color(0xFFD32D43),
         ),
       ),
-      home: const LoginPage(),
+      home: const SplashScreen(),
+      onGenerateRoute: (settings) {
+        print('🔍 onGenerateRoute called with: ${settings.name}');
+        print('📋 Arguments: ${settings.arguments}');
+        
+        switch (settings.name) {
+          case '/email-verification':
+            try {
+              final args = settings.arguments as Map<String, dynamic>;
+              print('✅ Creating EmailVerificationPage with email: ${args['email']}, purpose: ${args['purpose']}');
+              return MaterialPageRoute(
+                builder: (context) => EmailVerificationPage(
+                  email: args['email'],
+                  purpose: args['purpose'],
+                ),
+              );
+            } catch (e) {
+              print('❌ Error creating EmailVerificationPage: $e');
+              return MaterialPageRoute(
+                builder: (context) => Scaffold(
+                  appBar: AppBar(title: const Text('Error')),
+                  body: Center(
+                    child: Text('Navigation Error: $e'),
+                  ),
+                ),
+              );
+            }
+          default:
+            print('❌ Route not found: ${settings.name}');
+            return null;
+        }
+      },
       routes: {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignupPage(),
@@ -172,6 +206,11 @@ class MyApp extends StatelessWidget {
         '/payment-method': (context) => const PaymentmethodPage(),
         '/address': (context) => const AddressPage(),
         '/edit-payment-method': (context) => const EditPaymentMethodPage(),
+        '/welcome': (context) => const WelcomePage(),
+        '/email-verification-manual': (context) => const EmailVerificationPage(
+          email: 'temp@example.com',
+          purpose: 'registration',
+        ),
       },
     );
   }

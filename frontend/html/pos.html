@@ -18,7 +18,7 @@
       </button>
       <a class="navbar-brand d-flex align-items-center" href="#">
         <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
-        Ramen App
+        RamenXpress
       </a>
       <div class="d-flex align-items-center ms-auto">
         <img src="../assets/notif.png" alt="notif" class="rounded-circle me-2" style="height: 40px; width: 40px;">
@@ -180,55 +180,64 @@
             </div>
           </div>
 
-          <!-- Ingredient Customization (available for all menu items) -->
-          <div id="addOnsSection" class="mb-4">
-            <div class="d-flex align-items-center mb-3">
-              <i class="fas fa-utensils text-danger me-2"></i>
-              <h6 class="mb-0 fw-bold text-dark">Customize Your Order</h6>
-            </div>
-            
-            <!-- Ingredient Removal Section -->
-            <div class="mb-3">
-              <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-warning bg-opacity-10 rounded-3 border border-warning border-opacity-25" 
-                   data-bs-toggle="collapse" 
-                   data-bs-target="#ingredientsCollapse" 
-                   aria-expanded="true" 
-                   aria-controls="ingredientsCollapse"
-                   style="cursor: pointer;">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-minus-circle text-warning me-2"></i>
-                  <h6 class="mb-0 fw-bold text-dark">Remove Ingredients</h6>
-                  <small class="text-muted ms-2">(Check to remove)</small>
-                </div>
-                <i class="fas fa-chevron-down text-warning" id="ingredientsChevron"></i>
-              </div>
-            
-              <div class="collapse show" id="ingredientsCollapse">
-                <div class="row g-2" id="ingredientsGrid">
-                  <!-- Ingredients will be loaded here -->
+          <!-- Add-ons (for Ramen) -->
+          <div id="addOnsSection" class="mb-3 d-none">
+            <label class="form-label fw-bold">Add-ons</label>
+            <div class="row g-2" id="addOnsGrid">
+              <div class="col-6">
+                <div class="card addon-card" data-addon="extraNoodles" data-price="50">
+                  <div class="card-body p-2 text-center">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="extraNoodles">
+                      <label class="form-check-label" for="extraNoodles">
+                        <i class="fas fa-utensils mb-1 d-block"></i>
+                        <small>Extra Noodles</small>
+                        <div class="text-danger small">+₱50</div>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <!-- Add-ons Section -->
-            <div class="mb-3">
-              <div class="d-flex align-items-center justify-content-between mb-2 p-2 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25" 
-                   data-bs-toggle="collapse" 
-                   data-bs-target="#addOnsCollapse" 
-                   aria-expanded="true" 
-                   aria-controls="addOnsCollapse"
-                   style="cursor: pointer;">
-                <div class="d-flex align-items-center">
-                  <i class="fas fa-plus-circle text-success me-2"></i>
-                  <h6 class="mb-0 fw-bold text-dark">Add Extras</h6>
-                  <small class="text-muted ms-2">(Check to add)</small>
+              <div class="col-6">
+                <div class="card addon-card" data-addon="extraChashu" data-price="80">
+                  <div class="card-body p-2 text-center">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="extraChashu">
+                      <label class="form-check-label" for="extraChashu">
+                        <i class="fas fa-drumstick-bite mb-1 d-block"></i>
+                        <small>Extra Chashu</small>
+                        <div class="text-danger small">+₱80</div>
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <i class="fas fa-chevron-down text-success" id="addOnsChevron"></i>
               </div>
-              
-              <div class="collapse show" id="addOnsCollapse">
-                <div class="row g-2" id="addOnsGrid">
-                  <!-- Add-ons will be loaded here -->
+              <div class="col-6">
+                <div class="card addon-card" data-addon="extraEgg" data-price="30">
+                  <div class="card-body p-2 text-center">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="extraEgg">
+                      <label class="form-check-label" for="extraEgg">
+                        <i class="fas fa-egg mb-1 d-block"></i>
+                        <small>Extra Egg</small>
+                        <div class="text-danger small">+₱30</div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="card addon-card" data-addon="extraSeaweed" data-price="20">
+                  <div class="card-body p-2 text-center">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="extraSeaweed">
+                      <label class="form-check-label" for="extraSeaweed">
+                        <i class="fas fa-leaf mb-1 d-block"></i>
+                        <small>Extra Seaweed</small>
+                        <div class="text-danger small">+₱20</div>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
