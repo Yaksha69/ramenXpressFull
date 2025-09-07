@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,11 +15,12 @@ class ApiService {
     const bool isDebug = bool.fromEnvironment('dart.vm.product') == false;
     
     if (isDebug) {
-      // Development mode - use localhost
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3000/api/v1';
-      }
-      return 'http://localhost:3000/api/v1';
+      // Development mode
+      // Use your laptop's IP address for real device testing on same WiFi network
+      // If testing on emulator, change this to:
+      // - Android emulator: 'http://10.0.2.2:3000/api/v1'
+      // - iOS simulator: 'http://localhost:3000/api/v1'
+      return 'http://192.168.0.105:3000/api/v1';
     } else {
       // Production mode - use hardcoded production URL
       return 'https://ramenb.onrender.com/api/v1';
@@ -96,6 +96,129 @@ class ApiService {
         'email': email,
         'phone': phone,
         'password': password,
+      });
+
+      if (response.statusCode == 201) {
+        return response.data;
+      }
+      throw Exception('Registration failed');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  // OTP Methods
+  Future<Map<String, dynamic>> sendRegistrationOTP(String email) async {
+    try {
+      final response = await _dio.post('/otp/send-registration-otp', data: {
+        'email': email,
+      });
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to send OTP');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> registerCustomer(String firstName, String lastName, String email, String password) async {
+    try {
+      final response = await _dio.post('/customers/register', data: {
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'password': password,
+      });
+
+      if (response.statusCode == 201) {
+        return response.data;
+      }
+      throw Exception('Registration failed');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> sendLoginOTP(String email) async {
+    try {
+      final response = await _dio.post('/otp/send-login-otp', data: {
+        'email': email,
+      });
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to send OTP');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOTP(String email, String code, String purpose) async {
+    try {
+      String endpoint;
+      Map<String, dynamic> requestData;
+      
+      if (purpose == 'registration') {
+        // Use customer verification endpoint that updates the database
+        endpoint = '/customers/verify-email';
+        requestData = {
+          'email': email,
+          'otpCode': code,
+        };
+      } else {
+        // For login, use generic OTP verification
+        endpoint = '/otp/verify-otp';
+        requestData = {
+          'email': email,
+          'code': code,
+          'purpose': purpose,
+        };
+      }
+
+      final response = await _dio.post(endpoint, data: requestData);
+
+      if (response.statusCode == 200) {
+        // For registration verification, save the token if provided
+        if (purpose == 'registration' && response.data['data']?['token'] != null) {
+          _authToken = response.data['data']['token'];
+          await _saveToken(_authToken!);
+        }
+        return response.data;
+      }
+      throw Exception('Invalid or expired verification code');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> resendOTP(String email, String purpose) async {
+    try {
+      final response = await _dio.post('/otp/resend-otp', data: {
+        'email': email,
+        'purpose': purpose,
+      });
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to resend OTP');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> registerWithOTP(String firstName, String lastName, String email, String phone, String password, String emailOTP) async {
+    try {
+      final response = await _dio.post('/customers/register', data: {
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'phone': phone,
+        'password': password,
+        'emailOTP': emailOTP,
       });
 
       if (response.statusCode == 201) {

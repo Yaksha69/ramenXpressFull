@@ -58,7 +58,7 @@
       </button>
       <a class="navbar-brand d-flex align-items-center" href="#">
         <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
-        Ramen App
+        RamenXpress
       </a>
       <div class="d-flex align-items-center ms-auto">
         <img src="../assets/notif.png" alt="notif" class="rounded-circle me-2" style="height: 40px; width: 40px;">
@@ -165,11 +165,6 @@
                    <i class="fas fa-utensils me-2"></i>Menu
                  </button>
                </li>
-               <li class="nav-item" role="presentation">
-                 <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab" aria-controls="logs" aria-selected="false">
-                   <i class="fas fa-history me-2"></i>Inventory Logs
-                 </button>
-               </li>
              </ul>
            </div>
          </div>
@@ -251,78 +246,6 @@
                        <button class="btn btn-primary" id="menuPrevPage">Previous Page</button>
                        <span class="ms-md-auto" id="menuPageInfo">Page 1 of 1</span>
                        <button class="btn btn-primary" id="menuNextPage">Next Page</button>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             </div>
-           </div>
-
-           <!-- Inventory Logs Tab -->
-           <div class="tab-pane fade" id="logs" role="tabpanel" aria-labelledby="logs-tab">
-             <div class="row">
-               <div class="col-12 d-flex justify-content-center">
-                 <div class="card shadow rounded-4 w-100" style="max-width:90vw;">
-                   <div class="card-body small">
-                     <div class="d-flex justify-content-between align-items-center mb-4">
-                       <h3 class="card-title mb-0">Inventory Activity Logs</h3>
-                       <div class="d-flex gap-2">
-                         <button class="btn btn-outline-primary" id="refreshLogsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-                         <button class="btn btn-outline-success" id="exportLogsBtn"><i class="fas fa-download"></i> Export</button>
-                       </div>
-                     </div>
-                     
-                     <!-- Filter Controls -->
-                     <div class="row g-2 mb-3">
-                       <div class="col-md-3">
-                         <label for="logTypeFilter" class="form-label">Filter by Type</label>
-                         <select class="form-select" id="logTypeFilter">
-                           <option value="">All Types</option>
-                           <option value="ingredient_added">Ingredient Added</option>
-                           <option value="ingredient_updated">Ingredient Updated</option>
-                           <option value="ingredient_deleted">Ingredient Deleted</option>
-                           <option value="menu_added">Menu Added</option>
-                           <option value="menu_updated">Menu Updated</option>
-                           <option value="menu_deleted">Menu Deleted</option>
-                         </select>
-                       </div>
-                       <div class="col-md-3">
-                         <label for="logDateFilter" class="form-label">Filter by Date</label>
-                         <input type="date" class="form-control" id="logDateFilter">
-                       </div>
-                       <div class="col-md-4">
-                         <label for="logSearch" class="form-label">Search</label>
-                         <input type="text" class="form-control" id="logSearch" placeholder="Search logs...">
-                       </div>
-                       <div class="col-md-2">
-                         <label class="form-label">&nbsp;</label>
-                         <button class="btn btn-primary w-100" id="applyLogFilters">Apply Filters</button>
-                       </div>
-                     </div>
-                     
-                     <div class="table-responsive">
-                       <table class="table table-hover align-middle">
-                         <thead class="table-light text-uppercase fw-bold">
-                           <tr>
-                             <th>Timestamp</th>
-                             <th>Action</th>
-                             <th>Item Type</th>
-                             <th>Item Name</th>
-                             <th>Details</th>
-                             <th>User</th>
-                           </tr>
-                         </thead>
-                         <tbody id="logsTableBody">
-                           <!-- Log entries will be populated by JavaScript -->
-                         </tbody>
-                       </table>
-                     </div>
-                     
-                     <!-- Logs Pagination -->
-                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 gap-2">
-                       <button class="btn btn-primary" id="logsPrevPage">Previous Page</button>
-                       <span class="ms-md-auto" id="logsPageInfo">Page 1 of 1</span>
-                       <button class="btn btn-primary" id="logsNextPage">Next Page</button>
                      </div>
                    </div>
                  </div>
@@ -497,7 +420,6 @@
   <!-- Config JS (must be loaded first) -->
   <script src="../js/config.js"></script>
   <script src="../js/inventory.js"></script>
-  <script src="../js/inventory-logs.js"></script>
 
   <script>
     // Sidebar toggle functionality

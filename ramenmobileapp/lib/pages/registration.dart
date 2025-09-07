@@ -39,23 +39,33 @@ class _SignupPageState extends State<SignupPage> {
       });
       try {
         final api = ApiService();
-        await api.register(
+        
+        // Register customer - this creates account and sends OTP automatically
+        await api.registerCustomer(
           _firstNameController.text.trim(),
           _lastNameController.text.trim(),
           _emailController.text.trim(),
-          _phoneController.text.trim(),
           _passwordController.text,
         );
+        
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful! Please log in.')),
+          // Navigate to email verification 
+          Navigator.pushNamed(
+            context, 
+            '/email-verification',
+            arguments: {
+              'email': _emailController.text.trim(),
+              'purpose': 'registration',
+            },
           );
-          Navigator.pushReplacementNamed(context, '/login');
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Registration failed: \\${e.toString()}'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('Registration failed: ${e.toString().replaceAll('Exception: ', '')}'), 
+              backgroundColor: Colors.red
+            ),
           );
         }
       } finally {
@@ -116,6 +126,9 @@ class _SignupPageState extends State<SignupPage> {
                             Expanded(
                               child: TextFormField(
                                 controller: _firstNameController,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                                ],
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   hintText: 'First Name',
@@ -129,6 +142,9 @@ class _SignupPageState extends State<SignupPage> {
                                   if (value == null || value.isEmpty) {
                                     return 'Please enter your first name';
                                   }
+                                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                                    return 'First name should only contain letters';
+                                  }
                                   return null;
                                 },
                               ),
@@ -137,6 +153,9 @@ class _SignupPageState extends State<SignupPage> {
                             Expanded(
                               child: TextFormField(
                                 controller: _lastNameController,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                                ],
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   hintText: 'Last Name',
@@ -149,6 +168,9 @@ class _SignupPageState extends State<SignupPage> {
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Please enter your last name';
+                                  }
+                                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                                    return 'Last name should only contain letters';
                                   }
                                   return null;
                                 },
@@ -185,10 +207,11 @@ class _SignupPageState extends State<SignupPage> {
                           keyboardType: TextInputType.number,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11), // PH mobile numbers are 11 digits
                           ],
                           decoration: InputDecoration(
                             border: OutlineInputBorder(),
-                            hintText: 'Enter your number',
+                            hintText: '09XXXXXXXXX',
                             prefixIcon: Icon(
                               Icons.phone,
                               color: const Color.fromARGB(255, 0, 0, 0),
@@ -199,8 +222,9 @@ class _SignupPageState extends State<SignupPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your phone number';
                             }
-                            if (value.length < 7) {
-                              return 'Please enter a valid phone number';
+                            // Philippine mobile number validation
+                            if (!RegExp(r'^09[0-9]{9}$').hasMatch(value)) {
+                              return 'Please enter a valid PH mobile number (09XXXXXXXXX)';
                             }
                             return null;
                           },

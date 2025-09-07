@@ -16,9 +16,26 @@ exports.sendRegistrationOTP = async (req, res) => {
     // Check if email already exists
     const existingCustomer = await Customer.findOne({ email });
     if (existingCustomer) {
+      // If customer exists but email is not verified, allow resending OTP
+      if (!existingCustomer.emailVerified) {
+        const result = await emailOTPService.sendEmailOTP(email, 'registration');
+        
+        if (result.success) {
+          return res.json({
+            success: true,
+            message: 'Verification code resent to your email'
+          });
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: result.message
+          });
+        }
+      }
+      
       return res.status(400).json({
         success: false,
-        message: 'Email already registered'
+        message: 'Email already registered and verified'
       });
     }
 
@@ -155,9 +172,26 @@ exports.resendOTP = async (req, res) => {
     if (purpose === 'registration') {
       const existingCustomer = await Customer.findOne({ email });
       if (existingCustomer) {
+        // If customer exists but email is not verified, allow resending OTP
+        if (!existingCustomer.emailVerified) {
+          const result = await emailOTPService.resendOTP(email, purpose);
+          
+          if (result.success) {
+            return res.json({
+              success: true,
+              message: 'Verification code resent to your email'
+            });
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: result.message
+            });
+          }
+        }
+        
         return res.status(400).json({
           success: false,
-          message: 'Email already registered'
+          message: 'Email already registered and verified'
         });
       }
     }

@@ -3,10 +3,7 @@ const router = express.Router();
 const inventoryController = require('../controllers/inventoryController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Get ingredients for POS (no auth required)
-router.get('/ingredients', inventoryController.getIngredients);
-
-// Apply authentication and admin check to all other inventory routes
+// Apply authentication and admin check to all inventory routes
 router.use(authMiddleware, authMiddleware.isAdmin);
 
 // Get all inventory items

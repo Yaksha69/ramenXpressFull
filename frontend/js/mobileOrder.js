@@ -7,6 +7,9 @@ const API_BASE_URL = getApiUrl();
 const authToken = localStorage.getItem("authToken"); // For admin/cashier authentication
 
 let loadedOrders = [];
+let currentPage = 1;
+let ordersPerPage = 10;
+let totalOrders = 0;
 
 // Helper function to get correct image URL from backend data
 function getImageUrl(imagePath) {
@@ -91,6 +94,7 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
                 </td>
             </tr>
         `;
+        renderPagination(0, 0);
         return;
     }
 
@@ -100,12 +104,19 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
         filteredOrders = orders.filter(order => order.status === statusFilter);
     }
 
+    totalOrders = filteredOrders.length;
+
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * ordersPerPage;
+    const endIndex = startIndex + ordersPerPage;
+    const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
     // Separate delivered and non-delivered orders (if not filtering for delivered)
-    let nonDelivered = filteredOrders;
+    let nonDelivered = paginatedOrders;
     let delivered = [];
     if (statusFilter === 'all') {
-        nonDelivered = filteredOrders.filter(order => order.status !== 'delivered');
-        delivered = filteredOrders.filter(order => order.status === 'delivered');
+        nonDelivered = paginatedOrders.filter(order => order.status !== 'delivered');
+        delivered = paginatedOrders.filter(order => order.status === 'delivered');
     }
 
     // Show non-delivered orders first
@@ -178,6 +189,9 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
             tbody.appendChild(row);
         });
     }
+
+    // Render pagination
+    renderPagination(totalOrders, currentPage);
 }
 
 // Call this after loading orders
@@ -555,6 +569,103 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 }); 
+
+// Pagination functionality
+function renderPagination(total, page) {
+    const paginationList = document.getElementById('paginationList');
+    if (!paginationList) return;
+
+    paginationList.innerHTML = '';
+    
+    if (total === 0) {
+        return;
+    }
+
+    const totalPages = Math.ceil(total / ordersPerPage);
+    
+    if (totalPages <= 1) {
+        return;
+    }
+
+    // Previous button
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${page === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${page - 1})">Previous</a>`;
+    paginationList.appendChild(prevLi);
+
+    // Calculate page range to show
+    let startPage = Math.max(1, page - 2);
+    let endPage = Math.min(totalPages, page + 2);
+
+    // Adjust range if we're near the beginning or end
+    if (endPage - startPage < 4) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, startPage + 4);
+        } else if (endPage === totalPages) {
+            startPage = Math.max(1, endPage - 4);
+        }
+    }
+
+    // First page and ellipsis if needed
+    if (startPage > 1) {
+        const firstLi = document.createElement('li');
+        firstLi.className = 'page-item';
+        firstLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(1)">1</a>`;
+        paginationList.appendChild(firstLi);
+
+        if (startPage > 2) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            paginationList.appendChild(ellipsisLi);
+        }
+    }
+
+    // Page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === page ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+        paginationList.appendChild(li);
+    }
+
+    // Last page and ellipsis if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsisLi = document.createElement('li');
+            ellipsisLi.className = 'page-item disabled';
+            ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+            paginationList.appendChild(ellipsisLi);
+        }
+
+        const lastLi = document.createElement('li');
+        lastLi.className = 'page-item';
+        lastLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${totalPages})">${totalPages}</a>`;
+        paginationList.appendChild(lastLi);
+    }
+
+    // Next button
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${page === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${page + 1})">Next</a>`;
+    paginationList.appendChild(nextLi);
+}
+
+function changePage(page) {
+    if (page < 1 || page > Math.ceil(totalOrders / ordersPerPage)) {
+        return;
+    }
+    
+    currentPage = page;
+    displayOrders(window.lastLoadedOrders || loadedOrders, window.currentOrderStatusFilter || 'all');
+}
+
+// Add page size selector
+function changePageSize(size) {
+    ordersPerPage = parseInt(size);
+    currentPage = 1; // Reset to first page
+    displayOrders(window.lastLoadedOrders || loadedOrders, window.currentOrderStatusFilter || 'all');
+}
 
 // --- Socket.IO Real-Time Order Status Updates ---
 // If using modules, you may need: import { io } from 'socket.io-client';

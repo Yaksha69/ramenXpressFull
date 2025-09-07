@@ -1360,8 +1360,8 @@ class _PaymentPageState extends State<PaymentPage> {
                     child: ElevatedButton(
                       onPressed: () async {
                         try {
-                          // Validate delivery method and address
-                          if (selectedDeliveryMethod == 'Delivery' && selectedAddress == null) {
+                          // Always require delivery address (for both pickup and delivery)
+                          if (selectedAddress == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Please select a delivery address'),

@@ -19,7 +19,7 @@
       </button>
       <a class="navbar-brand d-flex align-items-center" href="#">
         <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
-        Ramen App
+        RamenXpress
       </a>
       <div class="d-flex align-items-center ms-auto">
         <div class="dropdown me-3">
@@ -244,51 +244,6 @@
                 <canvas id="barChart" class="w-100" style="max-height:120px;"></canvas>
               </div>
             </div>
-            
-            <!-- Customer Feedback Quick Summary -->
-            <div class="card shadow rounded-4 p-3 mt-4 mb-5">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="fw-bold mb-0">
-                  <i class="fas fa-star text-warning me-2"></i>Customer Feedback
-                </h4>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#feedbackManagementModal">
-                  <i class="fas fa-chart-bar me-1"></i>View All Feedback
-                </button>
-              </div>
-              
-              <!-- Quick Summary Cards -->
-              <div class="row g-3 mb-3">
-                <div class="col-6 col-md-3">
-                  <div class="text-center p-1 bg-light rounded-3">
-                    <div class="display-6 fw-bold text-warning" id="quickAverageRating">4.2</div>
-                    <div class="text-muted small">Average Rating</div>
-                  </div>
-                </div>
-                <div class="col-6 col-md-3">
-                  <div class="text-center p-1 bg-light rounded-3">
-                    <div class="display-6 fw-bold text-primary" id="quickTotalFeedback">127</div>
-                    <div class="text-muted small">Total Reviews</div>
-                  </div>
-                </div>
-                <div class="col-6 col-md-3">
-                  <div class="text-center p-1 bg-light rounded-3">
-                    <div class="display-6 fw-bold text-success" id="quickPositiveFeedback">89%</div>
-                    <div class="text-muted small">Positive</div>
-                  </div>
-                </div>
-                <div class="col-6 col-md-3">
-                  <div class="text-center p-1 bg-light rounded-3">
-                    <div class="display-6 fw-bold text-info" id="quickResponseRate">95%</div>
-                    <div class="text-muted small">Response Rate</div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Recent Feedback Preview -->
-              <div class="recent-feedback-preview" id="recentFeedbackPreview">
-                <!-- Recent feedback preview will be loaded here -->
-              </div>
-            </div>
           </div>
 
           <!-- Right Column -->
@@ -299,8 +254,6 @@
                 <canvas id="pieChart" class="w-100" style="max-height:140px; max-width:220px;"></canvas>
               </div>
             </div>
-            
-            
             <div class="card shadow rounded-4 p-3">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <h4 class="fw-bold mb-0">Low Quantity Stock</h4>
@@ -393,149 +346,6 @@
       </div>
     </div>
   </div>
-
-
-  <!-- Feedback Management Modal -->
-  <div class="modal fade" id="feedbackManagementModal" tabindex="-1" aria-labelledby="feedbackManagementModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg mt-5">
-      <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
-          <div class="d-flex align-items-center">
-            <h5 class="modal-title mb-0" id="feedbackManagementModalLabel">
-              <i class="fas fa-chart-bar me-2"></i>Customer Feedback Management
-            </h5>
-          </div>
-          <div class="d-flex gap-2">
-            <button class="btn btn-outline-light btn-sm" onclick="refreshFeedback()">
-              <i class="fas fa-sync-alt me-1"></i>Refresh
-            </button>
-            <button class="btn btn-outline-light btn-sm" onclick="exportFeedback()">
-              <i class="fas fa-download me-1"></i>Export
-            </button>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-        </div>
-        <div class="modal-body">
-
-          <!-- Filter and Search Controls -->
-          <div class="row g-1 mb-2">
-            <div class="col-md-3">
-              <label for="ratingFilter" class="form-label">Filter by Rating</label>
-              <select class="form-select" id="ratingFilter" onchange="filterFeedback()">
-                <option value="">All Ratings</option>
-                <option value="5">5 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="2">2 Stars</option>
-                <option value="1">1 Star</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label for="foodRatingFilter" class="form-label">Filter by Food Rating</label>
-              <select class="form-select" id="foodRatingFilter" onchange="filterFeedback()">
-                <option value="">All Food Ratings</option>
-                <option value="5">5 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="2">2 Stars</option>
-                <option value="1">1 Star</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label for="categoryFilter" class="form-label">Filter by Category</label>
-              <select class="form-select" id="categoryFilter" onchange="filterFeedback()">
-                <option value="">All Categories</option>
-                <option value="food_quality">Food Quality</option>
-                <option value="service">Service</option>
-                <option value="ambiance">Ambiance</option>
-                <option value="value_for_money">Value for Money</option>
-                <option value="speed">Speed of Service</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label for="searchFeedback" class="form-label">Search</label>
-              <input type="text" class="form-control" id="searchFeedback" placeholder="Search feedback..." onkeyup="filterFeedback()">
-            </div>
-          </div>
-
-          <!-- Two Column Layout -->
-          <div class="row">
-            <!-- Left Column - Rating Summary and Chart -->
-            <div class="col-md-6">
-              <h6 class="fw-bold mb-2">Rating Summary</h6>
-              <div class="row g-2 mb-3">
-                <div class="col-6">
-                  <div class="text-center p-2 bg-light rounded-3">
-                    <div class="h4 fw-bold text-warning" id="modalAverageRating">4.2</div>
-                    <div class="text-muted small">Average Rating</div>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="text-center p-2 bg-light rounded-3">
-                    <div class="h4 fw-bold text-primary" id="modalTotalFeedback">127</div>
-                    <div class="text-muted small">Total Reviews</div>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="text-center p-2 bg-light rounded-3">
-                    <div class="h4 fw-bold text-success" id="modalPositiveFeedback">89%</div>
-                    <div class="text-muted small">Positive</div>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="text-center p-2 bg-light rounded-3">
-                    <div class="h4 fw-bold text-info" id="modalResponseRate">95%</div>
-                    <div class="text-muted small">Response Rate</div>
-                  </div>
-                </div>
-              </div>
-              
-              <h6 class="fw-bold mb-1">Rating Distribution</h6>
-              <div class="bg-light rounded-3 p-2">
-                <canvas id="modalFeedbackChart" class="w-100" style="max-height:200px;"></canvas>
-              </div>
-            </div>
-            
-            <!-- Right Column - All Feedback -->
-            <div class="col-md-6">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold mb-0">All Feedback</h6>
-                <span class="badge bg-info">View Only - Admin</span>
-              </div>
-              <div class="feedback-list" id="modalFeedbackList" style="max-height: 400px; overflow-y: auto;">
-                <!-- Feedback items will be loaded here as Bootstrap cards -->
-              </div>
-            </div>
-          </div>
-          
-          <style>
-            .feedback-rating {
-              display: flex;
-              gap: 0.125rem;
-            }
-            
-            .feedback-rating .star {
-              color: #ffc107;
-              font-size: 0.875rem;
-            }
-            
-            .feedback-rating .star.empty {
-              color: #e9ecef;
-            }
-          </style>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            <i class="fas fa-times me-1"></i>Close
-          </button>
-          <button type="button" class="btn btn-primary" onclick="exportFeedback()">
-            <i class="fas fa-download me-1"></i>Export Data
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 <!-- Bootstrap JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -543,8 +353,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- Your Chart JS -->
 <script src="../js/dashboard-charts.js"></script>
-<!-- Feedback System JavaScript -->
-<script src="../js/feedback.js"></script>
 <!-- Dashboard JavaScript -->
 <script src="../js/dashboard.js"></script>
 </html>
