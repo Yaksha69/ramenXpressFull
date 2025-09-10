@@ -33,6 +33,9 @@ router.put('/update/:id', isAdminOrCashier, mobileOrderController.updateMobileOr
 // Add this route for updating order status
 router.patch('/:orderId/status', isAdminOrCashier, mobileOrderController.updateOrderStatus);
 
+// Add route for cancelling orders (customers can cancel their own orders)
+router.patch('/:id/cancel', mobileOrderController.cancelMobileOrder);
+
 // Admin-only route to sync mobile orders to sales
 router.post('/sync-to-sales', authMiddleware.isAdmin, mobileOrderController.syncMobileOrdersToSales);
 

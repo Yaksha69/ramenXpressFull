@@ -44,6 +44,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         return const Color(0xFF1A1A1A);
       case OrderStatus.ready:
         return const Color.fromARGB(255, 185, 255, 73);
+      case OrderStatus.outForDelivery:
+        return const Color.fromARGB(255, 255, 165, 0); // Orange color
       case OrderStatus.delivered:
         return const Color.fromARGB(255, 10, 180, 10);
       case OrderStatus.cancelled:

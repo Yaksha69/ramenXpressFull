@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/socket_service.dart';
+import '../services/api_service.dart';
 import '../widgets/delivery_animation.dart';
 
 class InvoicePage extends StatefulWidget {
@@ -68,17 +69,20 @@ class _InvoicePageState extends State<InvoicePage> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return const Color.fromARGB(255, 88, 97, 255); // Blue
+        return const Color.fromARGB(255, 88, 97, 255);
       case 'preparing':
-        return const Color(0xFF1A1A1A); // Black
+        return const Color(0xFF1A1A1A); 
       case 'ready':
-        return Colors.blue; // Blue
+        return Colors.blue;
+      case 'outfordelivery':
+      case 'out for delivery':
+        return const Color.fromARGB(255, 255, 165, 0); 
       case 'delivered':
-        return const Color.fromARGB(255, 10, 180, 10); // Green
+        return const Color.fromARGB(255, 10, 180, 10); 
       case 'cancelled':
-        return const Color(0xFFD32D43); // Red
+        return const Color(0xFFD32D43); 
       default:
-        return const Color.fromARGB(255, 175, 175, 175); // Grey
+        return const Color.fromARGB(255, 175, 175, 175); 
     }
   }
 
@@ -115,6 +119,7 @@ class _InvoicePageState extends State<InvoicePage> {
       'Pending',
       'Preparing',
       'Ready',
+      'Out for Delivery',
       'Delivered',
       'Cancelled',
     ];
@@ -122,6 +127,7 @@ class _InvoicePageState extends State<InvoicePage> {
       'Your order has been received',
       'Your food is being prepared',
       'Your order is ready for pickup/delivery',
+      'On the way to you!',
       'Order completed successfully',
       'Order was cancelled',
     ];
@@ -129,8 +135,10 @@ class _InvoicePageState extends State<InvoicePage> {
       'pending': 0,
       'preparing': 1,
       'ready': 2,
-      'delivered': 3,
-      'cancelled': 4,
+      'outfordelivery': 3,
+      'out for delivery': 3,
+      'delivered': 4,
+      'cancelled': 5,
     };
     int currentStep = statusMap[status.toLowerCase()] ?? 0;
     bool isCancelled = status.toLowerCase() == 'cancelled';
@@ -393,9 +401,90 @@ class _InvoicePageState extends State<InvoicePage> {
     );
   }
 
+  bool _canCancelOrder() {
+    final status = order['status']?.toString().toLowerCase() ?? '';
+    return status == 'pending';
+  }
+
+  Future<void> _cancelOrder() async {
+    // Show confirmation dialog
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep Order'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final orderId = order['id'] ?? order['_id'];
+      await ApiService().cancelOrder(orderId.toString());
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order cancelled successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Refresh order data from server to get the latest status
+      try {
+        final orderId = order['id'] ?? order['_id'];
+        final updatedOrder = await ApiService().getMobileOrderById(orderId.toString());
+        setState(() {
+          order = updatedOrder.toJson();
+        });
+      } catch (refreshError) {
+        // If refresh fails, at least update status locally
+        setState(() {
+          order['status'] = 'cancelled';
+        });
+      }
+      
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to cancel order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   bool _shouldShowAnimation(String status) {
     return status.toLowerCase() == 'ready' ||
            status.toLowerCase() == 'out for delivery' || 
+           status.toLowerCase() == 'outfordelivery' ||
            status.toLowerCase() == 'on the way';
   }
 
@@ -405,6 +494,7 @@ class _InvoicePageState extends State<InvoicePage> {
         return '15-20 minutes';
       case 'ready':
         return '5-10 minutes';
+      case 'outfordelivery':
       case 'out for delivery':
       case 'on the way':
         return '10-15 minutes';
@@ -412,6 +502,119 @@ class _InvoicePageState extends State<InvoicePage> {
         return 'Delivered';
       default:
         return 'Calculating...';
+    }
+  }
+
+  void _showReviewDialog() {
+    int selectedRating = 0;
+    final TextEditingController commentController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.star, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Text('Rate Your Order'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('How was your experience?'),
+                  const SizedBox(height: 16),
+                  // Star Rating
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedRating = index + 1;
+                          });
+                        },
+                        child: Icon(
+                          Icons.star,
+                          size: 40,
+                          color: index < selectedRating ? Colors.orange : Colors.grey[300],
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  // Comment TextField
+                  TextField(
+                    controller: commentController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Tell us about your experience (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                  ),
+                  onPressed: selectedRating > 0 ? () => _submitReview(selectedRating, commentController.text) : null,
+                  child: const Text('Submit Review', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _submitReview(int rating, String comment) async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final orderId = order['id'] ?? order['_id'];
+      await ApiService().submitReview(orderId.toString(), rating, comment);
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Close review dialog
+      Navigator.of(context).pop();
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thank you for your review!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit review: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -473,6 +676,51 @@ class _InvoicePageState extends State<InvoicePage> {
             _buildOrderItems(),
             _buildOrderSummary(),
             const SizedBox(height: 24),
+            // Cancel order button (only show if order can be cancelled)
+            if (_canCancelOrder()) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _cancelOrder,
+                  child: const Text(
+                    'Cancel Order',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            // Show review button for delivered orders
+            if ((order['status'] ?? 'pending').toLowerCase() == 'delivered') ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => _showReviewDialog(),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.star, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Leave a Review', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

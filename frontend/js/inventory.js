@@ -31,7 +31,8 @@ const MENU_DELETE_URL = getApiUrl() + '/menu/deleteMenu/';
 // Helper function to get correct image URL from backend data
 function getImageUrl(imagePath) {
   if (!imagePath) {
-    return '../assets/ramen1.jpg'; // Default image
+    console.warn('No image path provided, using default');
+    return '../assets/ramen1.jpg'; // Default image only if no path
   }
   
   // If it's already a full URL, return as is
@@ -49,9 +50,11 @@ function getImageUrl(imagePath) {
     return imagePath;
   }
   
-  // If it's just a filename (like uploaded images), it's a backend uploaded image
+  // If it's just a filename (like uploaded images from backend), construct backend URL
   if (!imagePath.includes('/') && imagePath.includes('.')) {
-    return `${getUploadUrl()}/uploads/menus/${imagePath}`;
+    const backendUrl = `${getUploadUrl()}/uploads/menus/${imagePath}`;
+    console.log('Constructed backend image URL:', backendUrl);
+    return backendUrl;
   }
   
   // If it's just a filename without extension, assume it's in assets
@@ -476,12 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       e.stopPropagation();
       
-      // Check if there's an image file selected
-      const imageInput = document.getElementById('menuImage');
-      if (imageInput && imageInput.files && imageInput.files[0]) {
-        console.log('Image file selected:', imageInput.files[0].name);
-      }
-      
       // Get form values manually to ensure they're properly set
       const name = document.getElementById('menuName').value;
       const price = document.getElementById('menuPrice').value;
@@ -490,19 +487,26 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log('Form values:', { name, price, category, imageFile });
       
+      // Validate required fields
+      if (!name || !price || !category) {
+        document.getElementById('addMenuError').textContent = 'Please fill in all required fields';
+        document.getElementById('addMenuError').style.display = 'block';
+        return;
+      }
+      
+      if (!imageFile) {
+        document.getElementById('addMenuError').textContent = 'Please select an image file';
+        document.getElementById('addMenuError').style.display = 'block';
+        return;
+      }
+      
       const formData = new FormData();
       formData.append('name', name);
-      formData.append('price', parseFloat(price)); // Convert to number
+      formData.append('price', parseFloat(price));
       formData.append('category', category);
+      formData.append('image', imageFile);
       
-      if (imageFile) {
-        formData.append('image', imageFile);
-        console.log('Added image file to FormData');
-      } else {
-        // Provide a default image if no file is selected
-        formData.append('image', 'default-ramen.jpg');
-        console.log('Added default image to FormData');
-      }
+      console.log('Added image file to FormData:', imageFile.name);
       
       // Get selected ingredients first
       const selectedIngredients = [];
@@ -521,17 +525,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Add ingredients to form data
       formData.append('ingredients', JSON.stringify(selectedIngredients));
       
-      // Test without file upload first
-      console.log('Testing without file upload...');
-      const testFormData = new FormData();
-      testFormData.append('name', name);
-      testFormData.append('price', parseFloat(price));
-      testFormData.append('category', category);
-      testFormData.append('image', 'default-ramen.jpg');
-      testFormData.append('ingredients', JSON.stringify(selectedIngredients));
-      
-      console.log('Test FormData contents:', Array.from(testFormData.entries()));
-      
       try {
         console.log('Submitting add menu form...');
         console.log('FormData contents:', Array.from(formData.entries()));
@@ -540,10 +533,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const response = await fetch(ADD_MENU_URL, {
           method: 'POST',
-          body: testFormData, // Use test FormData without file
-          headers: {
-            // Don't set Content-Type for FormData, let browser set it with boundary
-          }
+          body: formData, // Use actual FormData with file
+          // Don't set Content-Type for FormData, let browser set it with boundary
         });
         
         console.log('Add menu response status:', response.status);

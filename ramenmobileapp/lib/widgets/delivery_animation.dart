@@ -363,8 +363,8 @@ class DeliveryStatusWidget extends StatelessWidget {
     if (isPickup && orderStatus.toLowerCase() == 'ready') {
       // Show pickup animation for ready pickup orders
       return _buildPickupAnimation(context);
-    } else if (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'on the way')) {
-      // Show delivery animation for delivery orders
+    } else if (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'outfordelivery')) {
+      // Show delivery animation only for delivery orders when out for delivery
       return DeliveryAnimation(
         animationPath: lottieAnimationPath ?? 'assets/animations/delivery_guy.json',
         message: _getStatusMessage(),
@@ -448,7 +448,7 @@ class DeliveryStatusWidget extends StatelessWidget {
   bool _shouldShowAnimation() {
     final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
     return (isPickup && orderStatus.toLowerCase() == 'ready') ||
-           (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'on the way'));
+           (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'outfordelivery'));
   }
 
   String _getStatusMessage() {
@@ -459,6 +459,7 @@ class DeliveryStatusWidget extends StatelessWidget {
         return 'Preparing your order';
       case 'ready':
         return isPickup ? 'Ready for pickup!' : 'Order is ready!';
+      case 'outfordelivery':
       case 'out for delivery':
       case 'on the way':
         return 'On the way to you!';

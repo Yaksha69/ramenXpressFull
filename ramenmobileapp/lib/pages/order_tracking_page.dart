@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/delivery_animation.dart';
 import '../models/order.dart';
@@ -31,6 +32,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     } else {
       _isLoading = false;
     }
+    
+    // Set up periodic refresh to get latest order status
+    _startPeriodicRefresh();
+  }
+  
+  void _startPeriodicRefresh() {
+    Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted) {
+        _loadOrderDetails();
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _loadOrderDetails() async {
@@ -41,12 +55,15 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       });
 
       final order = await ApiService().getMobileOrderById(widget.orderId);
+      print('🔍 Loaded order status: ${order.status.name}');
+      print('🔍 Order delivery method: ${order.deliveryMethod}');
       
       setState(() {
         _order = order;
         _isLoading = false;
       });
     } catch (e) {
+      print('❌ Error loading order: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -243,11 +260,18 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
 
   Widget _buildOrderTimeline() {
     final isPickup = _order!.deliveryMethod.toLowerCase() == 'pickup';
+    final currentStatus = _order!.status.name.toLowerCase();
+    print('🔍 Building timeline - Delivery method: ${_order!.deliveryMethod}, isPickup: $isPickup');
+    print('🔍 Current order status: $currentStatus');
+    
+    // Force delivery timeline if status is outfordelivery
+    final forceDeliveryTimeline = currentStatus == 'outfordelivery' || currentStatus == 'out for delivery';
+    final showDeliverySteps = !isPickup || forceDeliveryTimeline;
     
     final steps = [
       {'title': 'Order Placed', 'status': 'completed'},
       {'title': 'Preparing', 'status': _getStepStatus('preparing')},
-      if (isPickup) ..[
+      if (!showDeliverySteps) ..[
         {'title': 'Ready for Pickup', 'status': _getStepStatus('ready')},
       ] else ..[
         {'title': 'Ready', 'status': _getStepStatus('ready')},
@@ -255,6 +279,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         {'title': 'Delivered', 'status': _getStepStatus('delivered')},
       ],
     ];
+    
+    print('🔍 Show delivery steps: $showDeliverySteps');
+    print('🔍 Timeline steps: ${steps.map((s) => s['title'] as String).toList()}');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -507,6 +534,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
 
   String _getStepStatus(String stepName) {
     final currentStatus = _order!.status.name.toLowerCase();
+    print('🔍 Checking step: $stepName, current status: $currentStatus');
     
     switch (stepName.toLowerCase()) {
       case 'preparing':
@@ -516,8 +544,10 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         return currentStatus == 'ready' ? 'current' : 
                _isStatusAfter(currentStatus, 'ready') ? 'completed' : 'pending';
       case 'out for delivery':
-        return currentStatus == 'out for delivery' || currentStatus == 'on the way' ? 'current' : 
-               _isStatusAfter(currentStatus, 'out for delivery') ? 'completed' : 'pending';
+        final isOutForDelivery = currentStatus == 'outfordelivery' || currentStatus == 'out for delivery' || currentStatus == 'on the way';
+        print('🔍 Out for delivery check: $isOutForDelivery');
+        return isOutForDelivery ? 'current' : 
+               _isStatusAfter(currentStatus, 'outfordelivery') ? 'completed' : 'pending';
       case 'delivered':
         return currentStatus == 'delivered' ? 'completed' : 'pending';
       default:
@@ -526,9 +556,20 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   bool _isStatusAfter(String currentStatus, String checkStatus) {
-    const statusOrder = ['preparing', 'ready', 'out for delivery', 'delivered'];
-    final currentIndex = statusOrder.indexOf(currentStatus);
-    final checkIndex = statusOrder.indexOf(checkStatus);
+    const statusOrder = ['preparing', 'ready', 'outfordelivery', 'delivered'];
+    
+    // Handle different status formats
+    String normalizedCurrent = currentStatus;
+    String normalizedCheck = checkStatus;
+    
+    if (currentStatus == 'out for delivery') normalizedCurrent = 'outfordelivery';
+    if (checkStatus == 'out for delivery') normalizedCheck = 'outfordelivery';
+    
+    final currentIndex = statusOrder.indexOf(normalizedCurrent);
+    final checkIndex = statusOrder.indexOf(normalizedCheck);
+    
+    print('🔍 Status comparison - Current: $normalizedCurrent (index: $currentIndex), Check: $normalizedCheck (index: $checkIndex)');
+    
     return currentIndex > checkIndex;
   }
 
@@ -539,6 +580,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         return '15-20 minutes';
       case 'ready':
         return '5-10 minutes';
+      case 'outfordelivery':
       case 'out for delivery':
       case 'on the way':
         return '10-15 minutes';

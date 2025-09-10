@@ -135,13 +135,14 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
         const row = document.createElement("tr");
         const customerName = getCustomerDisplayName(order);
         const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
+        row.setAttribute('data-order-id', order._id);
         row.innerHTML = `
             <td>#${order.orderId || order._id}</td>
             <td>${customerName}</td>
             <td>${orderDate}</td>
             <td>₱${order.total ? order.total.toFixed(2) : "0.00"}</td>
             <td>${paymentBadge}</td>
-            <td>${statusBadge}</td>
+            <td class="status-cell">${statusBadge}</td>
             <td>
                 <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
                 <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
@@ -174,13 +175,14 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
             const row = document.createElement("tr");
             const customerName = getCustomerDisplayName(order);
             const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
+            row.setAttribute('data-order-id', order._id);
             row.innerHTML = `
                 <td>#${order.orderId || order._id}</td>
                 <td>${customerName}</td>
                 <td>${orderDate}</td>
                 <td>₱${order.total ? order.total.toFixed(2) : "0.00"}</td>
                 <td>${paymentBadge}</td>
-                <td>${statusBadge}</td>
+                <td class="status-cell">${statusBadge}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
                     <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
@@ -557,8 +559,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ status: newStatus })
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            // Instead of merging partial response, reload all orders to preserve customer info
+            
+            // Force reload the orders table to show updated status
             await loadMobileOrders();
+            
+            // Update the specific order row immediately for better UX
+            const orderRow = document.querySelector(`tr[data-order-id="${orderId}"]`);
+            if (orderRow) {
+                const statusCell = orderRow.querySelector('.status-cell');
+                if (statusCell) {
+                    statusCell.innerHTML = getStatusBadge(newStatus);
+                }
+            }
+            
             showSuccessModal(`Order status updated to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}!`, newStatus);
             // Hide modal
             const modalEl = document.getElementById('updateOrderStatusModal');
@@ -679,19 +692,17 @@ socket.on('connect', () => {
 
 socket.on('orderStatusUpdate', (data) => {
   console.log('Order status update received:', data);
-  // Call your UI update function here
-  // Example:
-  // updateOrderStatusInUI(data.orderId, data.status);
+  // Reload the orders table to show the updated status
+  loadMobileOrders();
+  
+  // Show a notification about the status change
+  if (data.status) {
+    showNotification(`Order #${data.order?.orderId || data.orderId} status updated to ${data.status}`, 'success');
+  }
 });
 
 function updateOrderStatusInUI(orderId, status) {
-  // Example: Find the order element by data-order-id and update its status
-  const orderElem = document.querySelector(`[data-order-id='${orderId}']`);
-  if (orderElem) {
-    const statusElem = orderElem.querySelector('.order-status');
-    if (statusElem) {
-      statusElem.textContent = status;
-      // Optionally update color, icon, etc.
-    }
-  }
+  // This function is now handled by reloading the entire orders table
+  // which ensures all data is fresh and consistent
+  loadMobileOrders();
 } 
