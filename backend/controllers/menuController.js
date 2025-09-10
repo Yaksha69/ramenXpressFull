@@ -42,6 +42,24 @@ const getMenuById = async (req, res) => {
   }
 };
 
+// Get add-ons (menu items with category 'add-ons')
+const getAddOns = async (req, res) => {
+  try {
+    const addOns = await Menu.find({ category: 'add-ons' });
+    res.status(200).json({
+      success: true,
+      count: addOns.length,
+      data: addOns
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching add-ons',
+      error: error.message
+    });
+  }
+};
+
 // Validate ingredients against inventory
 const validateIngredients = async (ingredients) => {
   const missingIngredients = [];
@@ -317,6 +335,7 @@ const getMenuByCategory = async (req, res) => {
 module.exports = {
   getAllMenu,
   getMenuById,
+  getAddOns,
   createMenu,
   updateMenu,
   deleteMenu,

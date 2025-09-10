@@ -19,6 +19,9 @@ const upload = multer({ storage });
 // Get all menu items
 router.get('/all', menuController.getAllMenu);
 
+// Get add-ons (must be before /:id route)
+router.get('/add-ons', menuController.getAddOns);
+
 // Get menu items by category
 router.get('/category/:category', menuController.getMenuByCategory);
 

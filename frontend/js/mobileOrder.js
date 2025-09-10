@@ -10,6 +10,7 @@ let loadedOrders = [];
 let currentPage = 1;
 let ordersPerPage = 10;
 let totalOrders = 0;
+let filteredOrders = [];
 
 // Helper function to get correct image URL from backend data
 function getImageUrl(imagePath) {
@@ -48,39 +49,107 @@ function getImageUrl(imagePath) {
 
 document.addEventListener("DOMContentLoaded", function () {
     loadMobileOrders();
-    // initializeFilters(); // Uncomment if you have filter logic
+    initializeFilters();
     window.addEventListener('focus', loadMobileOrders);
     setInterval(loadMobileOrders, 5000); // every 5 seconds
 });
 
-// Add order status filter buttons
-function renderOrderStatusFilters(currentStatus) {
-    const statuses = [
-        { key: 'all', label: 'All' },
-        { key: 'pending', label: 'Pending' },
-        { key: 'preparing', label: 'Preparing' },
-        { key: 'ready', label: 'Ready' },
-        { key: 'delivered', label: 'Delivered' },
-        { key: 'cancelled', label: 'Cancelled' }
-    ];
-    const container = document.getElementById('orderStatusFilters');
-    if (!container) return;
-    container.innerHTML = '';
-    statuses.forEach(status => {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-sm me-2 mb-2 ' + (currentStatus === status.key ? 'btn-primary' : 'btn-outline-primary');
-        btn.textContent = status.label;
-        btn.onclick = () => {
-            window.currentOrderStatusFilter = status.key;
-            displayOrders(window.lastLoadedOrders || loadedOrders, status.key);
-            renderOrderStatusFilters(status.key);
+// Initialize filter functionality
+function initializeFilters() {
+    // Initialize date range picker
+    $('#filterDate').daterangepicker({
+        autoUpdateInput: false,
+        locale: {
+            cancelLabel: 'Clear',
+            format: 'YYYY-MM-DD'
+        }
+    });
+
+    $('#filterDate').on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('YYYY-MM-DD') + ' - ' + picker.endDate.format('YYYY-MM-DD'));
+        applyFilters();
+    });
+
+    $('#filterDate').on('cancel.daterangepicker', function(ev, picker) {
+        $(this).val('');
+        applyFilters();
+    });
+
+    // Add event listeners for filter changes
+    document.getElementById('filterOrderStatus').addEventListener('change', applyFilters);
+    document.getElementById('filterPaymentMethod').addEventListener('change', applyFilters);
+    document.getElementById('filterApplyBtn').addEventListener('click', applyFilters);
+}
+
+// Apply all filters
+function applyFilters() {
+    const statusFilter = document.getElementById('filterOrderStatus').value;
+    const paymentFilter = document.getElementById('filterPaymentMethod').value;
+    const dateRange = document.getElementById('filterDate').value;
+
+    // Start with all loaded orders
+    filteredOrders = [...loadedOrders];
+
+    // Apply status filter
+    if (statusFilter && statusFilter !== 'all') {
+        filteredOrders = filteredOrders.filter(order => order.status === statusFilter);
+    }
+
+    // Apply payment method filter
+    if (paymentFilter && paymentFilter !== 'all') {
+        filteredOrders = filteredOrders.filter(order => {
+            const paymentMethod = order.paymentMethod || '';
+            return paymentMethod.toLowerCase() === paymentFilter.toLowerCase();
+        });
+    }
+
+    // Apply date range filter
+    if (dateRange && dateRange.includes(' - ')) {
+        const [startDate, endDate] = dateRange.split(' - ');
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include the entire end day
+
+        filteredOrders = filteredOrders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= start && orderDate <= end;
+        });
+    }
+
+    // Reset to first page when filtering
+    currentPage = 1;
+    
+    // Display filtered results
+    displayOrders(filteredOrders);
+}
+
+// Sort orders function - puts delivered orders at the bottom
+function sortOrders(orders) {
+    return orders.sort((a, b) => {
+        // Define status priority (lower number = higher priority)
+        const statusPriority = {
+            'pending': 1,
+            'processing': 2,
+            'preparing': 3,
+            'ready': 4,
+            'cancelled': 5,
+            'delivered': 6
         };
-        container.appendChild(btn);
+        
+        const aPriority = statusPriority[a.status] || 7;
+        const bPriority = statusPriority[b.status] || 7;
+        
+        // If same priority, sort by date (newest first)
+        if (aPriority === bPriority) {
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        
+        return aPriority - bPriority;
     });
 }
 
-// Update displayOrders to accept a status filter
-function displayOrders(orders, statusFilter = window.currentOrderStatusFilter || 'all') {
+// Update displayOrders to work with filtered data and pagination
+function displayOrders(orders) {
     window.lastLoadedOrders = orders;
     const tbody = document.getElementById("ordersTableBody");
     tbody.innerHTML = "";
@@ -98,29 +167,18 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
         return;
     }
 
-    // Filter orders by status
-    let filteredOrders = orders;
-    if (statusFilter && statusFilter !== 'all') {
-        filteredOrders = orders.filter(order => order.status === statusFilter);
-    }
-
-    totalOrders = filteredOrders.length;
+    // Sort orders to put delivered at the bottom
+    const sortedOrders = sortOrders([...orders]);
+    
+    totalOrders = sortedOrders.length;
 
     // Calculate pagination
     const startIndex = (currentPage - 1) * ordersPerPage;
     const endIndex = startIndex + ordersPerPage;
-    const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+    const paginatedOrders = sortedOrders.slice(startIndex, endIndex);
 
-    // Separate delivered and non-delivered orders (if not filtering for delivered)
-    let nonDelivered = paginatedOrders;
-    let delivered = [];
-    if (statusFilter === 'all') {
-        nonDelivered = paginatedOrders.filter(order => order.status !== 'delivered');
-        delivered = paginatedOrders.filter(order => order.status === 'delivered');
-    }
-
-    // Show non-delivered orders first
-    nonDelivered.forEach(order => {
+    // Display all orders with pagination (sorted with delivered at bottom)
+    paginatedOrders.forEach(order => {
         const orderDate = new Date(order.createdAt).toLocaleString();
         const statusBadge = getStatusBadge(order.status);
         let paymentStatus = order.paymentStatus;
@@ -150,53 +208,8 @@ function displayOrders(orders, statusFilter = window.currentOrderStatusFilter ||
         tbody.appendChild(row);
     });
 
-    // If there are delivered orders, add a separator row
-    if (statusFilter === 'all' && delivered.length > 0) {
-        const sepRow = document.createElement("tr");
-        sepRow.innerHTML = `<td colspan="7" class="text-center text-success fw-bold bg-light">Delivered Orders</td>`;
-        tbody.appendChild(sepRow);
-    }
-
-    // Show delivered orders below
-    if (statusFilter === 'all') {
-        delivered.forEach(order => {
-            const orderDate = new Date(order.createdAt).toLocaleString();
-            const statusBadge = getStatusBadge(order.status);
-            let paymentStatus = order.paymentStatus;
-            if (!paymentStatus) {
-                if (order.paymentMethod && order.paymentMethod.toLowerCase() !== 'cash on delivery') {
-                    paymentStatus = 'paid';
-                } else {
-                    paymentStatus = 'pending';
-                }
-            }
-            const paymentBadge = getPaymentBadge(paymentStatus);
-            const row = document.createElement("tr");
-            const customerName = getCustomerDisplayName(order);
-            const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
-            row.innerHTML = `
-                <td>#${order.orderId || order._id}</td>
-                <td>${customerName}</td>
-                <td>${orderDate}</td>
-                <td>₱${order.total ? order.total.toFixed(2) : "0.00"}</td>
-                <td>${paymentBadge}</td>
-                <td>${statusBadge}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
-                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-    }
-
     // Render pagination
     renderPagination(totalOrders, currentPage);
-}
-
-// Call this after loading orders
-function afterOrdersLoaded() {
-    renderOrderStatusFilters(window.currentOrderStatusFilter || 'all');
 }
 
 // Load mobile orders from backend
@@ -211,8 +224,8 @@ async function loadMobileOrders() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const orders = await response.json();
         loadedOrders = orders; // Store for modal use
+        filteredOrders = [...orders]; // Initialize filtered orders
         displayOrders(orders);
-        afterOrdersLoaded();
     } catch (error) {
         console.error("Error loading mobile orders:", error);
         showNotification("Failed to load orders. Please check your connection.", "error");
@@ -531,8 +544,6 @@ window.updateOrderStatus = function(orderId) {
     // Set select to current status
     const statusSelect = document.getElementById('updateModalNewStatus');
     statusSelect.value = order.status || 'pending';
-    // Clear notes
-    // document.getElementById('updateModalNotes').value = ''; // This line is removed as per the edit hint
     // Store orderId for confirm
     statusSelect.setAttribute('data-order-id', orderId);
     // Show modal
@@ -546,7 +557,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const statusSelect = document.getElementById('updateModalNewStatus');
         const newStatus = statusSelect.value;
         const orderId = statusSelect.getAttribute('data-order-id');
-        // Removed notes field
         try {
             const response = await fetch(`${API_BASE_URL}/mobile-orders/${orderId}/status`, {
                 method: 'PATCH',
@@ -657,14 +667,14 @@ function changePage(page) {
     }
     
     currentPage = page;
-    displayOrders(window.lastLoadedOrders || loadedOrders, window.currentOrderStatusFilter || 'all');
+    displayOrders(filteredOrders);
 }
 
 // Add page size selector
 function changePageSize(size) {
     ordersPerPage = parseInt(size);
     currentPage = 1; // Reset to first page
-    displayOrders(window.lastLoadedOrders || loadedOrders, window.currentOrderStatusFilter || 'all');
+    displayOrders(filteredOrders);
 }
 
 // --- Socket.IO Real-Time Order Status Updates ---

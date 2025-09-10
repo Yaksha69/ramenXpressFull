@@ -63,17 +63,42 @@ function getImageUrl(imagePath) {
   return imagePath;
 }
 
+// Threshold for low stock (admin-configurable, persisted via backend)
+async function getLowStockThreshold() {
+  try {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${getApiUrl()}/inventory/settings/low-stock-threshold`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const val = parseInt(data?.threshold ?? 10, 10);
+    return isNaN(val) || val < 1 ? 10 : val;
+  } catch {
+    return 10;
+  }
+}
+
+async function setLowStockThreshold(value) {
+  const num = parseInt(value, 10);
+  if (isNaN(num) || num < 1) return false;
+  const token = localStorage.getItem('authToken');
+  const res = await fetch(`${getApiUrl()}/inventory/settings/low-stock-threshold`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ threshold: num })
+  });
+  return res.ok;
+}
+
 function getStatusBadge(status, calculatedStatus, isOverridden) {
   let badgeClass = 'bg-success';
   if (status === 'low stock') badgeClass = 'bg-warning text-dark';
   if (status === 'out of stock') badgeClass = 'bg-danger';
   
   let badge = `<span class="badge ${badgeClass}">${status}</span>`;
-  
-  // Add override indicator if status differs from calculated
-  if (isOverridden) {
-    badge += ` <small class="text-muted">(override)</small>`;
-  }
   
   return badge;
 }
@@ -178,8 +203,11 @@ function updateSummaryCards(ingredients, menuItems = []) {
   const outOfStock = ingredients.filter(ingredient => 
     ingredient.status === 'out of stock' || ingredient.stocks <= 0
   ).length;
+  // Use calculatedStatus provided by backend; also compute via threshold for safety
+  let threshold = 10;
+  try { threshold = parseInt(localStorage.getItem('cachedLowStockThreshold') || '10', 10) || 10; } catch {}
   const lowStock = ingredients.filter(ingredient => 
-    ingredient.status === 'low stock' || (ingredient.stocks > 0 && ingredient.stocks <= 10)
+    ingredient.status === 'low stock' || ingredient.calculatedStatus === 'low stock' || (ingredient.stocks > 0 && ingredient.stocks <= threshold)
   ).length;
   const totalMenu = menuItems.length;
 
@@ -290,6 +318,43 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchInventory();
   initializeTabListeners();
 
+  // Initialize Low Stock Settings modal and wire to backend
+  const openSettingsBtn = document.getElementById('openLowStockThresholdModal');
+  const settingsModalEl = document.getElementById('lowStockSettingsModal');
+  const thresholdInputModal = document.getElementById('lowStockThresholdInputModal');
+  const saveBtnModal = document.getElementById('saveLowStockThresholdBtnModal');
+  const errorDiv = document.getElementById('lowStockSettingsError');
+
+  if (openSettingsBtn && settingsModalEl) {
+    const settingsModal = new bootstrap.Modal(settingsModalEl);
+    openSettingsBtn.addEventListener('click', async () => {
+      errorDiv && (errorDiv.style.display = 'none');
+      const threshold = await getLowStockThreshold();
+      localStorage.setItem('cachedLowStockThreshold', String(threshold));
+      if (thresholdInputModal) thresholdInputModal.value = threshold;
+      settingsModal.show();
+    });
+
+    if (saveBtnModal) {
+      saveBtnModal.addEventListener('click', async () => {
+        const value = thresholdInputModal?.value;
+        const ok = await setLowStockThreshold(value);
+        if (ok) {
+          localStorage.setItem('cachedLowStockThreshold', String(value));
+          // Refresh data to get recalculated statuses from backend
+          await fetchInventory();
+          settingsModal.hide();
+          Swal.fire('Saved', 'Low stock threshold updated.', 'success');
+        } else {
+          if (errorDiv) {
+            errorDiv.textContent = 'Invalid value. Please enter a number ≥ 1.';
+            errorDiv.style.display = 'block';
+          }
+        }
+      });
+    }
+  }
+
   // Add pagination event listeners
   const prevBtn = document.getElementById('prevPage');
   const nextBtn = document.getElementById('nextPage');
@@ -332,7 +397,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const stocks = parseInt(e.target.value) || 0;
         let suggestedStatus = 'in stock';
         if (stocks <= 0) suggestedStatus = 'out of stock';
-        else if (stocks <= 10) suggestedStatus = 'low stock';
+        else {
+          let threshold = 10; try { threshold = parseInt(localStorage.getItem('cachedLowStockThreshold') || '10', 10) || 10; } catch {}
+          if (stocks <= threshold) suggestedStatus = 'low stock';
+        }
         
         // Set as default if no status is selected yet
         if (!statusSelect.value || statusSelect.value === 'in stock') {
@@ -394,7 +462,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const stocks = parseInt(e.target.value) || 0;
         let suggestedStatus = 'in stock';
         if (stocks <= 0) suggestedStatus = 'out of stock';
-        else if (stocks <= 10) suggestedStatus = 'low stock';
+        else {
+          let threshold = 10; try { threshold = parseInt(localStorage.getItem('cachedLowStockThreshold') || '10', 10) || 10; } catch {}
+          if (stocks <= threshold) suggestedStatus = 'low stock';
+        }
         
         // Show suggestion
         statusSelect.title = `Calculated: ${suggestedStatus}`;

@@ -13,6 +13,8 @@ router.post('/login', customerController.loginWithEmail);
 // Google authentication
 router.post('/google-signin', customerController.googleSignIn);
 
+// Customer count endpoint (for dashboard)
+router.get('/count', customerController.getCustomerCount);
 
 // Protected routes (require authentication)
 router.use(customerAuthMiddleware);

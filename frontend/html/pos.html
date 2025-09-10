@@ -55,6 +55,11 @@
               <i class="fas fa-users me-2"></i> Mobile Order
             </a>
           </li>
+          <li class="nav-item mb-2">
+            <a href="kitchenList.html" class="nav-link text-white">
+              <i class="fas fa-list me-2"></i> Kitchen List
+            </a>
+          </li>
         </ul>
       </nav>
 
@@ -180,62 +185,39 @@
             </div>
           </div>
 
-          <!-- Add-ons (for Ramen) -->
-          <div id="addOnsSection" class="mb-3 d-none">
-            <label class="form-label fw-bold">Add-ons</label>
-            <div class="row g-2" id="addOnsGrid">
-              <div class="col-6">
-                <div class="card addon-card" data-addon="extraNoodles" data-price="50">
-                  <div class="card-body p-2 text-center">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="extraNoodles">
-                      <label class="form-check-label" for="extraNoodles">
-                        <i class="fas fa-utensils mb-1 d-block"></i>
-                        <small>Extra Noodles</small>
-                        <div class="text-danger small">+₱50</div>
-                      </label>
+          <!-- Remove Ingredients Section -->
+          <div class="mb-3">
+            <div class="accordion" id="ingredientsAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ingredientsCollapse" aria-expanded="false" aria-controls="ingredientsCollapse">
+                    <i class="fas fa-minus-circle me-2 text-danger"></i>Remove Ingredients
+                  </button>
+                </h2>
+                <div id="ingredientsCollapse" class="accordion-collapse collapse" aria-labelledby="ingredientsHeading" data-bs-parent="#ingredientsAccordion">
+                  <div class="accordion-body p-2">
+                    <div class="row g-1" id="ingredientsGrid">
+                      <!-- Ingredients will be loaded dynamically -->
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="col-6">
-                <div class="card addon-card" data-addon="extraChashu" data-price="80">
-                  <div class="card-body p-2 text-center">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="extraChashu">
-                      <label class="form-check-label" for="extraChashu">
-                        <i class="fas fa-drumstick-bite mb-1 d-block"></i>
-                        <small>Extra Chashu</small>
-                        <div class="text-danger small">+₱80</div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="card addon-card" data-addon="extraEgg" data-price="30">
-                  <div class="card-body p-2 text-center">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="extraEgg">
-                      <label class="form-check-label" for="extraEgg">
-                        <i class="fas fa-egg mb-1 d-block"></i>
-                        <small>Extra Egg</small>
-                        <div class="text-danger small">+₱30</div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="card addon-card" data-addon="extraSeaweed" data-price="20">
-                  <div class="card-body p-2 text-center">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="extraSeaweed">
-                      <label class="form-check-label" for="extraSeaweed">
-                        <i class="fas fa-leaf mb-1 d-block"></i>
-                        <small>Extra Seaweed</small>
-                        <div class="text-danger small">+₱20</div>
-                      </label>
+            </div>
+          </div>
+
+          <!-- Add Extras Section -->
+          <div class="mb-3">
+            <div class="accordion" id="addOnsAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#addOnsCollapse" aria-expanded="false" aria-controls="addOnsCollapse">
+                    <i class="fas fa-plus-circle me-2 text-success"></i>Add Extras
+                  </button>
+                </h2>
+                <div id="addOnsCollapse" class="accordion-collapse collapse" aria-labelledby="addOnsHeading" data-bs-parent="#addOnsAccordion">
+                  <div class="accordion-body p-2">
+                    <div class="row g-1" id="addOnsGrid">
+                      <!-- Add-ons will be loaded dynamically -->
                     </div>
                   </div>
                 </div>

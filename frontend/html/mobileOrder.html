@@ -62,6 +62,11 @@
               <i class="fas fa-users me-2"></i> Mobile Order
             </a>
           </li>
+          <li class="nav-item mb-2">
+            <a href="kitchenList.html" class="nav-link text-white">
+              <i class="fas fa-list me-2"></i> Kitchen List
+            </a>
+          </li>
         </ul>
       </nav>
 
@@ -98,9 +103,6 @@
                     <option value="PayMaya">PayMaya</option>
                   </select>
                 </div>
-                <div class="col-md-1 d-grid">
-                  <button type="button" class="btn btn-primary" id="filterApplyBtn">Apply</button>
-                </div>
               </form>
             </div>
           </div>
@@ -122,66 +124,7 @@
                     </tr>
                   </thead>
                   <tbody id="ordersTableBody">
-                  <tr>
-                    <td>#ORD1001</td>
-                    <td>Kyla Marie Cabungcal</td>
-                    <td>2025-07-10 8:23 AM</td>
-                    <td>₱350.00</td>
-                    <td><span class="badge bg-success">Paid</span></td>
-                    <td><span class="badge bg-warning text-dark">Processing</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('ORD1001')">View</button>
-                      <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus()">Update</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD1002</td>
-                    <td>James Rhoey De Castro</td>
-                    <td>2025-07-11 09:15 AM</td>
-                    <td>₱210.00</td>
-                    <td><span class="badge bg-warning text-dark">Pending</span></td>
-                    <td><span class="badge bg-secondary">Pending</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('ORD1002')">View</button>
-                      <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus()">Update</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD1003</td>
-                    <td>Bryan Thirdy Ornales</td>
-                    <td>2025-07-10 2:40 PM</td>
-                    <td>₱580.00</td>
-                    <td><span class="badge bg-success">Paid</span></td>
-                    <td><span class="badge bg-success">Delivered</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('ORD1003')">View</button>
-                      <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus()">Update</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD1004</td>
-                    <td>Maybel Pesigan</td>
-                    <td>2025-07-12 11:30 AM</td>
-                    <td>₱420.00</td>
-                    <td><span class="badge bg-danger">Failed</span></td>
-                    <td><span class="badge bg-secondary">Pending</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('ORD1004')">View</button>
-                      <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus()">Update</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD1005</td>
-                    <td>Carla Ramos</td>
-                    <td>2025-07-13 08:05 AM</td>
-                    <td>₱300.00</td>
-                    <td><span class="badge bg-success">Paid</span></td>
-                    <td><span class="badge bg-warning text-dark">Processing</span></td>
-                    <td>
-                      <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('ORD1005')">View</button>
-                      <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus()">Update</button>
-                    </td>
-                </tbody>
+                    <!-- Data will be loaded dynamically -->
                   </tbody>
                 </table>
               </div>
@@ -440,4 +383,3 @@
   </script>
 </body>
 </html>
-

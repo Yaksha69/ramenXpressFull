@@ -306,19 +306,24 @@ function setupEventListeners() {
     // Sidebar Toggle
     const sidebarToggle = document.getElementById('sidebarToggle');
     const closeSidebar = document.getElementById('closeSidebar');
+    const sidebarMenu = document.getElementById('sidebarMenu');
     
-    if (sidebarToggle) {
+    if (sidebarToggle && sidebarMenu) {
         sidebarToggle.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('show');
+            sidebarMenu.classList.toggle('show');
         });
     }
 
-    if (closeSidebar) {
+    if (closeSidebar && sidebarMenu) {
         closeSidebar.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.remove('show');
+            sidebarMenu.classList.remove('show');
         });
     }
+
+    // Bootstrap accordions handle their own collapse behavior
 }
+
+// Bootstrap accordions handle their own collapse behavior automatically
 
 // Format category for display
 function formatCategory(category) {
@@ -442,8 +447,9 @@ function openModal(itemId, itemName, itemPrice, itemCategory, itemImage) {
     document.getElementById('modalItemPrice').textContent = `₱${itemPrice.toFixed(2)}`;
     document.getElementById('modalQuantity').value = '1';
 
-    // Show/hide sections based on category
-    toggleModalSections(itemCategory);
+    // Load ingredients and add-ons for the new collapsible design
+    loadMenuIngredients(itemId);
+    loadAddOns();
 
     // Update total
     updateModalTotal();
@@ -456,16 +462,17 @@ function openModal(itemId, itemName, itemPrice, itemCategory, itemImage) {
 
 // Reset modal state
 function resetModalState() {
-    // Reset add-ons
-    document.querySelectorAll('.addon-card input[type="checkbox"]').forEach(checkbox => {
+    // Reset all checkboxes
+    document.querySelectorAll('#ingredientsGrid input[type="checkbox"], #addOnsGrid input[type="checkbox"]').forEach(checkbox => {
         checkbox.checked = false;
     });
+
+    // Remove selected classes from all cards
+    document.querySelectorAll('#ingredientsGrid .card, #addOnsGrid .card').forEach(card => {
+        card.classList.remove('bg-danger', 'bg-opacity-10', 'bg-success', 'bg-opacity-10');
+    });
+
     selectedAddons = [];
-
-
-
-    // Reset add-ons selection
-    this.selectedAddons = [];
 }
 
 // Toggle modal sections and load add-ons
@@ -556,9 +563,9 @@ function loadAddOnsFromMenu() {
 // Handle addon selection
 function handleAddonSelection(checkbox) {
     const addonId = checkbox.id;
-    const addonCard = checkbox.closest('.addon-card');
-    const addonPrice = parseFloat(addonCard.dataset.price);
-    const addonName = addonCard.querySelector('small').textContent;
+    const addonCard = checkbox.closest('.card');
+    const addonPrice = parseFloat(addonCard.querySelector('small.text-success').textContent.replace('+₱', ''));
+    const addonName = addonCard.querySelector('small.fw-bold').textContent;
     
     // Extract the actual ObjectId from the checkbox ID
     // Checkbox ID format: "addon_6879a1f70355e876dc25c9d9" -> extract "6879a1f70355e876dc25c9d9"
@@ -573,20 +580,154 @@ function handleAddonSelection(checkbox) {
     });
 
     if (checkbox.checked) {
+        addonCard.classList.add('bg-success', 'bg-opacity-10');
         selectedAddons.push({
             id: actualAddonId, // Store the actual ObjectId
             checkboxId: addonId, // Keep checkbox ID for UI operations
             name: addonName,
-            price: addonPrice
+            price: addonPrice,
+            action: 'add' // Mark as add-on
         });
     } else {
+        addonCard.classList.remove('bg-success', 'bg-opacity-10');
         selectedAddons = selectedAddons.filter(addon => addon.checkboxId !== addonId);
     }
     
-    console.log('Current selected addons:', selectedAddons);
+    console.log('Current selected addons:', selectedAddons.filter(item => item.action === 'add'));
+    updateModalTotal();
 }
 
+// Load menu ingredients for removal
+async function loadMenuIngredients(menuItemId) {
+    const ingredientsGrid = document.getElementById('ingredientsGrid');
+    if (!ingredientsGrid) return;
 
+    try {
+        console.log('Loading ingredients for menu item:', menuItemId);
+        
+        // Get the specific menu item to get its ingredients
+        const menuItemResponse = await apiRequest(`/menu/${menuItemId}`);
+        console.log('Menu item response:', menuItemResponse);
+        
+        // Extract the actual menu item data from the response
+        const menuItem = menuItemResponse.data || menuItemResponse;
+        console.log('Menu item data:', menuItem);
+        
+        if (!menuItem || !menuItem.ingredients || menuItem.ingredients.length === 0) {
+            console.log('No ingredients found in menu item, showing message');
+            ingredientsGrid.innerHTML = '<div class="col-12 text-center text-muted">No ingredients available for removal</div>';
+            return;
+        }
+
+        console.log('Menu item ingredients:', menuItem.ingredients);
+
+        // Use the ingredients directly from the menu item (no need for separate API call)
+        const availableIngredients = menuItem.ingredients.map(ing => ({
+            name: ing.inventoryItem,
+            units: 'pieces', // Default units since we don't have this info from menu
+            quantity: ing.quantity
+        }));
+        console.log('Available ingredients for removal:', availableIngredients);
+
+        if (availableIngredients.length === 0) {
+            ingredientsGrid.innerHTML = '<div class="col-12 text-center text-muted">No ingredients available for removal</div>';
+            return;
+        }
+
+        // Render ingredient cards using Bootstrap
+        ingredientsGrid.innerHTML = availableIngredients.map(ingredient => `
+            <div class="col-6">
+                <div class="card h-100 border-danger" data-ingredient="${ingredient.name}" style="height: 60px;">
+                    <div class="card-body p-2 d-flex align-items-center">
+                        <div class="form-check d-flex align-items-center flex-grow-1">
+                            <input class="form-check-input me-3" type="checkbox" id="ingredient_${ingredient.name}" 
+                                   onchange="handleIngredientSelection(this)">
+                            <div class="vr me-3" style="height: 30px; opacity: 0.3; border-color: #dc3545;"></div>
+                            <label class="form-check-label flex-grow-1" for="ingredient_${ingredient.name}">
+                                <div>
+                                    <div class="fw-bold text-dark" style="font-size: 14px;">${ingredient.name}</div>
+                                    <small class="text-muted" style="font-size: 11px;">${ingredient.units}</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        console.log('Rendered ingredient cards for removal');
+
+    } catch (error) {
+        console.error('Failed to load menu ingredients:', error);
+        ingredientsGrid.innerHTML = '<div class="col-12 text-center text-muted">Failed to load ingredients</div>';
+    }
+}
+
+// Load add-ons
+async function loadAddOns() {
+    const addOnsGrid = document.getElementById('addOnsGrid');
+    if (!addOnsGrid) return;
+
+    try {
+        const addOns = await apiRequest('/menu/add-ons');
+        
+        if (!addOns || !addOns.data || addOns.data.length === 0) {
+            addOnsGrid.innerHTML = '<div class="col-12 text-center text-muted">No add-ons available</div>';
+            return;
+        }
+
+        // Render add-on cards using Bootstrap
+        addOnsGrid.innerHTML = addOns.data.map(addon => `
+            <div class="col-6">
+                <div class="card h-100 border-success" data-addon="${addon._id}" style="height: 60px;">
+                    <div class="card-body p-2 d-flex align-items-center">
+                        <div class="form-check d-flex align-items-center flex-grow-1">
+                            <input class="form-check-input me-3" type="checkbox" id="addon_${addon._id}" 
+                                   onchange="handleAddonSelection(this)">
+                            <div class="vr me-3" style="height: 30px; opacity: 0.3; border-color: #198754;"></div>
+                            <label class="form-check-label flex-grow-1" for="addon_${addon._id}">
+                                <div>
+                                    <div class="fw-bold text-dark" style="font-size: 14px;">${addon.name}</div>
+                                    <small class="text-success fw-bold" style="font-size: 11px;">+₱${addon.price.toFixed(2)}</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Failed to load add-ons:', error);
+        addOnsGrid.innerHTML = '<div class="col-12 text-center text-muted">Failed to load add-ons</div>';
+    }
+}
+
+// Handle ingredient selection (for removal)
+function handleIngredientSelection(checkbox) {
+    const ingredientName = checkbox.id.replace('ingredient_', '');
+    const ingredientCard = checkbox.closest('.card');
+    
+    if (checkbox.checked) {
+        ingredientCard.classList.add('bg-danger', 'bg-opacity-10');
+        // Add to selectedAddons with action: 'remove'
+        selectedAddons.push({
+            id: ingredientName,
+            name: ingredientName,
+            price: 0, // No price for removed ingredients
+            action: 'remove'
+        });
+    } else {
+        ingredientCard.classList.remove('bg-danger', 'bg-opacity-10');
+        // Remove from selectedAddons
+        selectedAddons = selectedAddons.filter(item => 
+            !(item.name === ingredientName && item.action === 'remove')
+        );
+    }
+    
+    console.log('Current selected ingredients for removal:', selectedAddons.filter(item => item.action === 'remove'));
+    updateModalTotal();
+}
 
 // Update modal total
 function updateModalTotal() {
@@ -594,7 +735,10 @@ function updateModalTotal() {
 
     const basePrice = currentModalItem.price;
     const quantity = parseInt(document.getElementById('modalQuantity').value) || 1;
-    const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
+    // Only count add-ons (action: 'add'), not removed ingredients (action: 'remove')
+    const addonsTotal = selectedAddons
+        .filter(addon => addon.action === 'add' || !addon.action) // Include legacy add-ons without action
+        .reduce((sum, addon) => sum + addon.price, 0);
     const total = (basePrice + addonsTotal) * quantity;
 
     const totalElement = document.getElementById('modalTotalPrice');
@@ -646,7 +790,7 @@ function updateCart() {
                         <h6 class="mb-1">${item.name}</h6>
                         <small class="text-muted">
                             Qty: ${item.quantity} × ₱${item.price.toFixed(2)}
-                            ${item.addons.length > 0 ? `<br>Add-ons: ${item.addons.map(a => a.name).join(', ')}` : ''}
+                            ${formatCartCustomizations(item.addons)}
                         </small>
                         </div>
                     <div class="text-end">
@@ -662,6 +806,26 @@ function updateCart() {
 
     const total = cartItems.reduce((sum, item) => sum + item.total, 0);
     cartTotal.textContent = `₱${total.toFixed(2)}`;
+}
+
+// Format cart customizations to distinguish between added and removed items
+function formatCartCustomizations(addons) {
+    if (!addons || addons.length === 0) return '';
+    
+    const addedItems = addons.filter(item => item.action === 'add' || !item.action);
+    const removedItems = addons.filter(item => item.action === 'remove');
+    
+    let customizations = '';
+    
+    if (addedItems.length > 0) {
+        customizations += `<br><span class="text-success">Add: ${addedItems.map(a => a.name).join(', ')}</span>`;
+    }
+    
+    if (removedItems.length > 0) {
+        customizations += `<br><span class="text-danger">Remove: ${removedItems.map(r => r.name).join(', ')}</span>`;
+    }
+    
+    return customizations;
 }
 
 // Remove Cart Item
@@ -700,36 +864,47 @@ function handleCheckout() {
 // Handle Payment Confirm
 async function handlePaymentConfirm() {
     try {
-        // Process each cart item as a separate sale
-        const orderPromises = cartItems.map(async (item) => {
-            const orderData = {
+        // Prepare all items for single order
+        const items = cartItems.map(item => {
+            // Separate actual add-ons from removed ingredients
+            const actualAddOns = item.addons.filter(addon => addon.action === 'add' || !addon.action);
+            const removedIngredients = item.addons.filter(addon => addon.action === 'remove');
+            
+            return {
                 menuItem: item.id,
                 quantity: item.quantity,
-                addOns: item.addons.map(addon => ({
+                addOns: actualAddOns.map(addon => ({
                     menuItem: addon.id, // This is now the actual ObjectId
                     quantity: 1
                 })),
-                paymentMethod: paymentMethod,
-                serviceType: orderType
+                removedIngredients: removedIngredients.map(ingredient => ({
+                    inventoryItem: ingredient.inventoryItem || ingredient.name,
+                    name: ingredient.name,
+                    quantity: 1
+                }))
             };
-
-            console.log('Sending individual order data:', orderData);
-            console.log('Add-ons being sent:', orderData.addOns);
-
-            return await apiRequest('/sales/new-sale', {
-                method: 'POST',
-                body: JSON.stringify(orderData)
-            });
         });
 
-        const responses = await Promise.all(orderPromises);
-        console.log('All order responses:', responses);
-        console.log('Successfully processed orders:', responses.length);
+        const orderData = {
+            items: items,
+            paymentMethod: paymentMethod,
+            serviceType: orderType
+        };
+
+        console.log('Sending multiple sales order data:', orderData);
+
+        const response = await apiRequest('/sales/new-multiple-sales', {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+
+        console.log('Order response:', response);
+        console.log('Successfully processed order with ID:', response.orderID);
 
         // Handle successful order
         Swal.fire({
             title: 'Order Completed!',
-            text: `Successfully processed ${responses.length} items!`,
+            text: `Successfully processed ${response.totalItems} items with Order ID: ${response.orderID}!`,
             icon: 'success',
             confirmButtonText: 'OK',
             confirmButtonColor: '#dc3545'
