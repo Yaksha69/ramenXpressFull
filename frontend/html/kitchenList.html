@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RamenXpress Kitchen List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS & FontAwesome -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="../css/kitchen.css" rel="stylesheet">
+  <link href="../css/globalNotifications.css" rel="stylesheet">
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Socket.IO CDN for real-time updates -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+<body class="bg-light">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top">
+    <div class="container-fluid mx-1">
+      <button class="navbar-toggler" type="button" id="sidebarToggle">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <a class="navbar-brand ms-2 d-flex align-items-center" href="#">
+        <img src="../assets/logo.png" alt="Logo" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+        RamenXpress
+      </a>
+      <div class="d-flex align-items-center ms-auto">
+        <!-- Notification Dropdown -->
+        <div class="dropdown me-3">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none position-relative" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="../assets/notif.png" alt="notif" class="rounded-circle" style="height: 40px; width: 40px;">
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" id="notificationBadge" style="display: none;">0</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="notificationDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+            <li class="dropdown-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 fw-bold">Notifications</h6>
+              <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsAsRead()">Mark all read</button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <div id="notificationList">
+              <!-- Notifications will be loaded here -->
+            </div>
+          </ul>
+        </div>
+        
+        <!-- Admin Dropdown -->
+        <div class="dropdown">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+            <li>
+              <button class="dropdown-item" onclick="window.location.href='../login.html'">Logout</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <div class="row min-vh-100">
+      <!-- Sidebar -->
+      <nav id="sidebarMenu" class="bg-light text-white p-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fw-bold mb-0 text-dark">Menu</h4>
+          <button class="btn-close btn-close-white d-md-none" id="closeSidebar"></button>
+        </div>
+        <ul class="nav flex-column">
+          <li class="nav-item mb-2">
+            <a href="POS.html" class="nav-link text-white">
+              <i class="fas fa-tachometer-alt me-2"></i> Point of Sale
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a href="mobileOrder.html" class="nav-link text-white">
+              <i class="fas fa-users me-2"></i> Mobile Order
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a href="kitchenList.html" class="nav-link text-white bg-danger rounded">
+              <i class="fas fa-list me-2"></i> Kitchen List
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="container-fluid px-0">
+          <h2 class="fw-bold mb-3" style="font-size:2.2rem;">Kitchen Management</h2>
+          <hr>
+          
+          <!-- Kitchen Orders Cards -->
+          <div class="row g-2">
+            <!-- Pending Orders -->
+            <div class="col-md-6">
+              <div class="card shadow-sm rounded-4 border-0">
+                <div class="card-header bg-warning text-dark rounded-top-4 py-2">
+                  <h6 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Pending Orders
+                    <span class="badge bg-dark ms-2" id="pendingBadge">0</span>
+                  </h6>
+                </div>
+                <div class="card-body p-2" id="pendingOrders">
+                  <!-- Orders will be loaded here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Preparing Orders -->
+            <div class="col-md-6">
+              <div class="card shadow-sm rounded-4 border-0">
+                <div class="card-header bg-info text-white rounded-top-4 py-2">
+                  <h6 class="mb-0">
+                    <i class="fas fa-utensils me-2"></i>Preparing Orders
+                    <span class="badge bg-dark ms-2" id="preparingBadge">0</span>
+                  </h6>
+                </div>
+                <div class="card-body p-2" id="preparingOrders">
+                  <!-- Orders will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Order Details Modal -->
+  <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Order Details</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="orderDetailsContent">
+          <!-- Order details will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Socket.IO CDN for real-time updates -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  <!-- Config JS (must be loaded first) -->
+  <script src="../js/config.js"></script>
+  <!-- Global Notifications -->
+  <script src="../js/globalNotifications.js"></script>
+  <script src="../js/kitchenList.js"></script>
+
+  <script>
+    // Sidebar toggle functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarMenu = document.getElementById('sidebarMenu');
+      const closeSidebar = document.getElementById('closeSidebar');
+      const body = document.body;
+
+      // Toggle sidebar on button click
+      if (sidebarToggle && sidebarMenu) {
+        sidebarToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          sidebarMenu.classList.toggle('show');
+          body.classList.toggle('sidebar-open');
+        });
+      }
+      
+      // Close sidebar on close button click
+      if (closeSidebar && sidebarMenu) {
+        closeSidebar.addEventListener('click', function() {
+          sidebarMenu.classList.remove('show');
+          body.classList.remove('sidebar-open');
+        });
+      }
+      
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', function(e) {
+        if (window.innerWidth < 768 && 
+            sidebarMenu && 
+            sidebarMenu.classList.contains('show') && 
+            !sidebarMenu.contains(e.target) && 
+            !sidebarToggle.contains(e.target)) {
+          sidebarMenu.classList.remove('show');
+          body.classList.remove('sidebar-open');
+        }
+      });
+
+      // Handle window resize
+      function handleResize() {
+        if (window.innerWidth >= 768) {
+          sidebarMenu.classList.remove('show');
+          body.classList.remove('sidebar-open');
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+    });
+  </script>
+</body>
+</html>

@@ -21,7 +21,7 @@ const mobileOrderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ['pending', 'preparing', 'ready', 'delivered', 'cancelled'],
+    enum: ['pending', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
     default: 'pending'
   },
   orderDate: { 
@@ -49,4 +49,4 @@ const mobileOrderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('MobileOrder', mobileOrderSchema); 
+module.exports = mongoose.model('MobileOrder', mobileOrderSchema);

@@ -1,5 +1,6 @@
 const Menu = require('../models/menu');
 const Inventory = require('../models/inventory');
+const Settings = require('../models/settings');
 
 // Get all menu items
 const getAllMenu = async (req, res) => {
@@ -37,6 +38,100 @@ const getMenuById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching menu item',
+      error: error.message
+    });
+  }
+};
+
+// Get add-ons (menu items with category 'add-ons')
+const getAddOns = async (req, res) => {
+  try {
+    const addOns = await Menu.find({ category: 'add-ons' });
+    res.status(200).json({
+      success: true,
+      count: addOns.length,
+      data: addOns
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching add-ons',
+      error: error.message
+    });
+  }
+};
+
+// Get all menu items with ingredient stock information
+const getAllMenuWithStock = async (req, res) => {
+  try {
+    // Get low stock threshold
+    const settings = await Settings.findOne({ key: 'lowStockThreshold' });
+    const threshold = settings ? settings.value : 10;
+    
+    const menuItems = await Menu.find({});
+    const menuItemsWithStock = [];
+    
+    for (const menuItem of menuItems) {
+      const menuItemWithStock = {
+        ...menuItem.toObject(),
+        ingredientsWithStock: [],
+        canBeOrdered: true,
+        hasOutOfStock: false,
+        hasLowStock: false
+      };
+      
+      // Check each ingredient's stock
+      for (const ingredient of menuItem.ingredients) {
+        const inventoryItem = await Inventory.findOne({ name: ingredient.inventoryItem });
+        if (inventoryItem) {
+          const stockInfo = {
+            inventoryItem: ingredient.inventoryItem,
+            requiredQuantity: ingredient.quantity,
+            currentStock: inventoryItem.stocks,
+            isOutOfStock: inventoryItem.stocks <= 0,
+            isLowStock: inventoryItem.stocks > 0 && inventoryItem.stocks <= threshold,
+            status: inventoryItem.stocks <= 0 ? 'out of stock' : 
+                   inventoryItem.stocks <= threshold ? 'low stock' : 'in stock'
+          };
+          
+          menuItemWithStock.ingredientsWithStock.push(stockInfo);
+          
+          // Update menu item status
+          if (inventoryItem.stocks <= 0) {
+            menuItemWithStock.canBeOrdered = false;
+            menuItemWithStock.hasOutOfStock = true;
+          } else if (inventoryItem.stocks <= threshold) {
+            menuItemWithStock.hasLowStock = true;
+          }
+        } else {
+          // Ingredient not found in inventory
+          const stockInfo = {
+            inventoryItem: ingredient.inventoryItem,
+            requiredQuantity: ingredient.quantity,
+            currentStock: 0,
+            isOutOfStock: true,
+            isLowStock: false,
+            status: 'not found'
+          };
+          
+          menuItemWithStock.ingredientsWithStock.push(stockInfo);
+          menuItemWithStock.canBeOrdered = false;
+          menuItemWithStock.hasOutOfStock = true;
+        }
+      }
+      
+      menuItemsWithStock.push(menuItemWithStock);
+    }
+    
+    res.status(200).json({
+      success: true,
+      count: menuItemsWithStock.length,
+      data: menuItemsWithStock
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching menu items with stock',
       error: error.message
     });
   }
@@ -316,7 +411,9 @@ const getMenuByCategory = async (req, res) => {
 
 module.exports = {
   getAllMenu,
+  getAllMenuWithStock,
   getMenuById,
+  getAddOns,
   createMenu,
   updateMenu,
   deleteMenu,

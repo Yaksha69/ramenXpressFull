@@ -1,6 +1,7 @@
 const MobileOrder = require('../models/mobileOrder');
 const Sales = require('../models/sales');
 const Menu = require('../models/menu');
+const notificationController = require('./notificationController');
 
 // Create a new mobile order
 exports.createMobileOrder = async (req, res) => {
@@ -73,6 +74,44 @@ exports.createMobileOrder = async (req, res) => {
     console.log('💾 Saving mobile order:', JSON.stringify(mobileOrder, null, 2));
     const savedOrder = await mobileOrder.save();
 
+    // Create notification for new mobile order
+    try {
+      const customerName = req.customer?.firstName || req.customer?.name || 'Customer';
+      console.log('Creating notification for mobile order:', {
+        orderId: orderId,
+        customerName: customerName,
+        total: total,
+        paymentMethod: paymentMethod
+      });
+      
+      const notification = await notificationController.createNewOrderNotification({
+        orderId: orderId,
+        customerName: customerName,
+        total: total,
+        paymentMethod: paymentMethod
+      });
+      
+      console.log('Notification created successfully:', notification);
+      
+      // Emit real-time notification via Socket.IO
+      const io = req.app.get('io');
+      if (io && notification) {
+        console.log('Emitting newMobileOrder socket event with notification');
+        io.emit('newMobileOrder', {
+          orderId: orderId,
+          customerName: customerName,
+          total: total,
+          paymentMethod: paymentMethod,
+          notification: notification
+        });
+      } else {
+        console.log('Socket.IO not available or notification is null');
+      }
+    } catch (notificationError) {
+      console.error('Failed to create notification:', notificationError);
+      // Don't fail the order creation if notification fails
+    }
+
     // Create corresponding sales record for each item
     try {
       for (const item of items) {
@@ -81,7 +120,7 @@ exports.createMobileOrder = async (req, res) => {
         const salesOrderID = (totalSales + 1).toString().padStart(4, '0');
 
         // Map delivery method to service type
-        const serviceType = deliveryMethod === 'Delivery' ? 'pickup' : 'pickup';
+        const serviceType = deliveryMethod === 'Delivery' ? 'takeout' : 'takeout';
 
         // Calculate total amount for this item
         const itemTotal = (item.menuItem.price * item.quantity) + 
@@ -168,16 +207,44 @@ exports.updateOrderStatus = async (req, res) => {
     if (!updatedOrder) {
       return res.status(404).json({ message: 'Order not found' });
     }
-    // Emit socket.io event for real-time update
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('orderStatusUpdate', {
-        orderId: updatedOrder._id,
+    
+    // Create notification for status update
+    try {
+      const customerName = updatedOrder.customerId?.firstName || 
+                          updatedOrder.customerId?.name || 
+                          'Customer';
+      
+      const notification = await notificationController.createStatusUpdateNotification({
+        orderId: updatedOrder.orderId,
         status: updatedOrder.status,
-        customerId: updatedOrder.customerId?._id,
-        order: updatedOrder
+        customerName: customerName
       });
+      
+      // Emit socket.io event for real-time update
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('orderStatusUpdate', {
+          orderId: updatedOrder._id,
+          status: updatedOrder.status,
+          customerId: updatedOrder.customerId?._id,
+          order: updatedOrder,
+          notification: notification
+        });
+      }
+    } catch (notificationError) {
+      console.error('Failed to create status notification:', notificationError);
+      // Still emit the socket event even if notification fails
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('orderStatusUpdate', {
+          orderId: updatedOrder._id,
+          status: updatedOrder.status,
+          customerId: updatedOrder.customerId?._id,
+          order: updatedOrder
+        });
+      }
     }
+    
     res.json(updatedOrder);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -281,7 +348,7 @@ exports.syncMobileOrdersToSales = async (req, res) => {
             const salesOrderID = (totalSales + 1).toString().padStart(4, '0');
 
             // Map delivery method to service type
-            const serviceType = mobileOrder.deliveryMethod === 'Delivery' ? 'pickup' : 'pickup';
+            const serviceType = mobileOrder.deliveryMethod === 'Delivery' ? 'takeout' : 'takeout';
 
             // Calculate total amount for this item
             const itemTotal = (item.menuItem.price * item.quantity) + 

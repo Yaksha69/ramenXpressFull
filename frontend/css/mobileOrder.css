@@ -499,4 +499,90 @@ body {
 
 #sidebarMenu .btn-close-white {
   filter: invert(1) grayscale(100%) brightness(0%);
+}
+
+/* SweetAlert2 Custom Styles - Small Toast Notifications */
+.swal2-toast-small {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+  font-size: 14px !important;
+  padding: 12px 16px !important;
+  min-width: 300px !important;
+  max-width: 400px !important;
+}
+
+.swal2-toast-small .swal2-title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin-bottom: 4px !important;
+}
+
+.swal2-toast-small .swal2-content {
+  font-size: 13px !important;
+  margin-top: 0 !important;
+}
+
+.swal2-toast-small .swal2-icon {
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 8px !important;
+}
+
+.swal2-toast-small .swal2-timer-progress-bar {
+  height: 3px !important;
+}
+
+/* Custom badge styles in SweetAlert */
+.swal2-popup .badge {
+  font-size: 0.8rem !important;
+  padding: 0.4rem 0.8rem !important;
+  border-radius: 15px !important;
+  font-weight: 600 !important;
+}
+
+/* Animation for new order notifications */
+@keyframes newOrderPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.swal2-popup-new-order {
+  animation: newOrderPulse 0.6s ease-in-out !important;
+}
+
+/* Custom styling for order details in notifications */
+.swal2-popup .text-start p {
+  margin-bottom: 0.5rem !important;
+  font-size: 0.95rem !important;
+}
+
+.swal2-popup .text-start p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Button styling in SweetAlert */
+.swal2-styled.swal2-confirm {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.swal2-styled.swal2-cancel {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.swal2-styled.swal2-cancel:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 } 

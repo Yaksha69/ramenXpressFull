@@ -148,7 +148,7 @@ Headers:
 - `gcash` - GCash digital payment
 
 ### Service Types
-- `pickup` - Customer picks up the order
+- `takeout` - Customer takes out the order
 - `dine-in` - Customer dines in the restaurant
 
 ### Add-ons (Optional)

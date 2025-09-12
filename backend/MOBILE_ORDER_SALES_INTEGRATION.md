@@ -40,8 +40,8 @@ Each item in a mobile order creates a separate sales record with:
 #### Service Types
 | Mobile Order | Sales Record |
 |--------------|--------------|
-| `Pickup` | `pickup` |
-| `Delivery` | `pickup` (delivery orders are treated as pickup for sales) |
+| `Pickup` | `takeout` |
+| `Delivery` | `takeout` (delivery orders are treated as takeout for sales) |
 
 ### Database Schema Updates
 

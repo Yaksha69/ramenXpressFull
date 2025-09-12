@@ -4,17 +4,52 @@ if (!user.role || user.role !== 'admin') {
   window.location.href = 'pos.html';
 }
 
+// Add test button for notifications (for development/testing)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // Test notification button
+  const testButton = document.createElement('button');
+  testButton.textContent = 'Test Notification';
+  testButton.className = 'btn btn-warning btn-sm position-fixed';
+  testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+  testButton.onclick = function() {
+    showGlobalNotification('Test notification from Inventory!', 'warning');
+  };
+  document.body.appendChild(testButton);
+  
+  // Test inventory notification button
+  const testInventoryButton = document.createElement('button');
+  testInventoryButton.textContent = 'Test Inventory';
+  testInventoryButton.className = 'btn btn-danger btn-sm position-fixed';
+  testInventoryButton.style.cssText = 'bottom: 60px; right: 20px; z-index: 9999;';
+  testInventoryButton.onclick = function() {
+    testInventoryNotification();
+  };
+  document.body.appendChild(testInventoryButton);
+}
+
 // Pagination variables
 let allIngredients = [];
 let filteredIngredients = [];
 let currentPage = 1;
 const itemsPerPage = 10;
 
+// Initialize filteredIngredients as empty array to prevent undefined errors
+if (!Array.isArray(filteredIngredients)) {
+  filteredIngredients = [];
+}
+
 // Menu variables
 let allMenuItems = [];
 let filteredMenuItems = [];
 let currentMenuPage = 1;
 const menuItemsPerPage = 10;
+let menuSortColumn = 'name';
+let menuSortDirection = 'asc';
+
+// Initialize filteredMenuItems as empty array to prevent undefined errors
+if (!Array.isArray(filteredMenuItems)) {
+  filteredMenuItems = [];
+}
 
 // Fetch inventory from backend and render in table - using config system
 const API_URL = getApiUrl() + '/inventory/all';
@@ -66,24 +101,63 @@ function getImageUrl(imagePath) {
   return imagePath;
 }
 
+// Threshold for low stock (admin-configurable, persisted via backend)
+async function getLowStockThreshold() {
+  try {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`${getApiUrl()}/inventory/settings/low-stock-threshold`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const val = parseInt(data?.threshold ?? 10, 10);
+    return isNaN(val) || val < 1 ? 10 : val;
+  } catch {
+    return 10;
+  }
+}
+
+async function setLowStockThreshold(value) {
+  const num = parseInt(value, 10);
+  if (isNaN(num) || num < 1) return false;
+  const token = localStorage.getItem('authToken');
+  const res = await fetch(`${getApiUrl()}/inventory/settings/low-stock-threshold`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ threshold: num })
+  });
+  return res.ok;
+}
+
 function getStatusBadge(status, calculatedStatus, isOverridden) {
+  // Use calculatedStatus if available, otherwise fall back to status
+  const displayStatus = calculatedStatus || status;
+  
   let badgeClass = 'bg-success';
-  if (status === 'low stock') badgeClass = 'bg-warning text-dark';
-  if (status === 'out of stock') badgeClass = 'bg-danger';
+  if (displayStatus === 'low stock') badgeClass = 'bg-warning text-dark';
+  if (displayStatus === 'out of stock') badgeClass = 'bg-danger';
   
-  let badge = `<span class="badge ${badgeClass}">${status}</span>`;
+  let badge = `<span class="badge ${badgeClass}">${displayStatus}</span>`;
   
-  // Add override indicator if status differs from calculated
-  if (isOverridden) {
-    badge += ` <small class="text-muted">(override)</small>`;
+  // Add tooltip if status is overridden
+  if (isOverridden && calculatedStatus && calculatedStatus !== status) {
+    badge = `<span class="badge ${badgeClass}" title="Manual: ${status}, Calculated: ${calculatedStatus}">${displayStatus}</span>`;
   }
   
   return badge;
 }
 
-function renderIngredientsTableWithPagination(ingredients) {
+function renderIngredientsTableWithPagination(ingredients = filteredIngredients) {
   const tbody = document.getElementById('ingredientsTableBody');
   if (!tbody) return;
+
+  // Ensure ingredients is an array and use filteredIngredients as fallback
+  if (!Array.isArray(ingredients)) {
+    console.error('renderIngredientsTableWithPagination: ingredients is not an array:', ingredients);
+    ingredients = Array.isArray(filteredIngredients) ? filteredIngredients : [];
+  }
 
   const totalPages = Math.ceil(ingredients.length / itemsPerPage);
   
@@ -179,11 +253,17 @@ function updateSummaryCards(ingredients, menuItems = []) {
 
   const totalIngredients = ingredients.length;
   const outOfStock = ingredients.filter(ingredient => 
-    ingredient.status === 'out of stock' || ingredient.stocks <= 0
+    ingredient.stocks <= 0 || ingredient.calculatedStatus === 'out of stock'
   ).length;
-  const lowStock = ingredients.filter(ingredient => 
-    ingredient.status === 'low stock' || (ingredient.stocks > 0 && ingredient.stocks <= 10)
-  ).length;
+  // Use calculatedStatus provided by backend; also compute via threshold for safety
+  let threshold = 10;
+  try { threshold = parseInt(localStorage.getItem('cachedLowStockThreshold') || '10', 10) || 10; } catch {}
+  const lowStock = ingredients.filter(ingredient => {
+    // If stocks is 0 or negative, it should be out of stock, not low stock
+    if (ingredient.stocks <= 0) return false;
+    // Use calculatedStatus if available, otherwise check against threshold
+    return ingredient.calculatedStatus === 'low stock' || (ingredient.stocks > 0 && ingredient.stocks <= threshold);
+  }).length;
   const totalMenu = menuItems.length;
 
   // Update the summary card values with updated selectors for 4 cards
@@ -292,6 +372,44 @@ document.addEventListener('DOMContentLoaded', () => {
   
   fetchInventory();
   initializeTabListeners();
+  setupMenuSorting();
+
+  // Initialize Low Stock Settings modal and wire to backend
+  const openSettingsBtn = document.getElementById('openLowStockThresholdModal');
+  const settingsModalEl = document.getElementById('lowStockSettingsModal');
+  const thresholdInputModal = document.getElementById('lowStockThresholdInputModal');
+  const saveBtnModal = document.getElementById('saveLowStockThresholdBtnModal');
+  const errorDiv = document.getElementById('lowStockSettingsError');
+
+  if (openSettingsBtn && settingsModalEl) {
+    const settingsModal = new bootstrap.Modal(settingsModalEl);
+    openSettingsBtn.addEventListener('click', async () => {
+      errorDiv && (errorDiv.style.display = 'none');
+      const threshold = await getLowStockThreshold();
+      localStorage.setItem('cachedLowStockThreshold', String(threshold));
+      if (thresholdInputModal) thresholdInputModal.value = threshold;
+      settingsModal.show();
+    });
+
+    if (saveBtnModal) {
+      saveBtnModal.addEventListener('click', async () => {
+        const value = thresholdInputModal?.value;
+        const ok = await setLowStockThreshold(value);
+        if (ok) {
+          localStorage.setItem('cachedLowStockThreshold', String(value));
+          // Refresh data to get recalculated statuses from backend
+          await fetchInventory();
+          settingsModal.hide();
+          Swal.fire('Saved', 'Low stock threshold updated.', 'success');
+        } else {
+          if (errorDiv) {
+            errorDiv.textContent = 'Invalid value. Please enter a number ≥ 1.';
+            errorDiv.style.display = 'block';
+          }
+        }
+      });
+    }
+  }
 
   // Add pagination event listeners
   const prevBtn = document.getElementById('prevPage');
@@ -335,7 +453,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const stocks = parseInt(e.target.value) || 0;
         let suggestedStatus = 'in stock';
         if (stocks <= 0) suggestedStatus = 'out of stock';
-        else if (stocks <= 10) suggestedStatus = 'low stock';
+        else {
+          let threshold = 10; try { threshold = parseInt(localStorage.getItem('cachedLowStockThreshold') || '10', 10) || 10; } catch {}
+          if (stocks <= threshold) suggestedStatus = 'low stock';
+        }
         
         // Set as default if no status is selected yet
         if (!statusSelect.value || statusSelect.value === 'in stock') {
@@ -397,10 +518,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const stocks = parseInt(e.target.value) || 0;
         let suggestedStatus = 'in stock';
         if (stocks <= 0) suggestedStatus = 'out of stock';
-        else if (stocks <= 10) suggestedStatus = 'low stock';
+        else {
+          let threshold = 10; try { threshold = parseInt(localStorage.getItem('cachedLowStockThreshold') || '10', 10) || 10; } catch {}
+          if (stocks <= threshold) suggestedStatus = 'low stock';
+        }
         
-        // Show suggestion
+        // Show suggestion and update the select value
         statusSelect.title = `Calculated: ${suggestedStatus}`;
+        statusSelect.value = suggestedStatus;
+        
+        // Add visual indicator for status change
+        const statusLabel = document.querySelector('label[for="editIngredientStatus"]');
+        if (statusLabel) {
+          const currentStatus = statusSelect.value;
+          if (currentStatus === 'out of stock') {
+            statusLabel.innerHTML = 'Status <span class="text-danger">(Will be out of stock)</span>';
+          } else if (currentStatus === 'low stock') {
+            statusLabel.innerHTML = 'Status <span class="text-warning">(Will be low stock)</span>';
+          } else {
+            statusLabel.innerHTML = 'Status <span class="text-success">(Will be in stock)</span>';
+          }
+        }
+        
+        // Don't show notifications on input - only show when form is submitted
       });
     }
     
@@ -433,6 +573,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = await response.json();
           throw new Error(data.error || 'Failed to update ingredient');
         }
+        // Notifications are now handled by the backend and sent via Socket.IO
+        // No need to show notifications here as they will be received from the backend
+        
         // Hide the modal after successful edit
         const modalEl = document.getElementById('editIngredientModal');
         const editModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -663,8 +806,8 @@ async function populateIngredientsList() {
             <br>
             <small class="text-muted">
               Stock: ${ingredient.stocks} ${ingredient.units} 
-              <span class="badge ${ingredient.status === 'in stock' ? 'bg-success' : ingredient.status === 'low stock' ? 'bg-warning' : 'bg-danger'} ms-1">
-                ${ingredient.status}
+              <span class="badge ${(ingredient.calculatedStatus || ingredient.status) === 'in stock' ? 'bg-success' : (ingredient.calculatedStatus || ingredient.status) === 'low stock' ? 'bg-warning' : 'bg-danger'} ms-1">
+                ${ingredient.calculatedStatus || ingredient.status}
               </span>
             </small>
           </label>
@@ -763,6 +906,9 @@ async function fetchMenuItems() {
       allMenuItems = data.data || data;
       filteredMenuItems = [...allMenuItems];
       
+      // Apply sorting
+      sortMenuItems();
+      
       // Update summary cards with menu data
       updateSummaryCards(allIngredients, allMenuItems);
       
@@ -774,7 +920,7 @@ async function fetchMenuItems() {
     console.error('Error fetching menu items:', error);
     document.getElementById('menuTableBody').innerHTML = `
       <tr>
-        <td colspan="6" class="text-center text-danger">
+        <td colspan="5" class="text-center text-danger">
           <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
           <div>Error loading menu items: ${error.message}</div>
         </td>
@@ -784,9 +930,15 @@ async function fetchMenuItems() {
 }
 
 // Render menu table with pagination
-function renderMenuTableWithPagination(menuItems) {
+function renderMenuTableWithPagination(menuItems = filteredMenuItems) {
   const tbody = document.getElementById('menuTableBody');
   if (!tbody) return;
+
+  // Ensure menuItems is an array and use filteredMenuItems as fallback
+  if (!Array.isArray(menuItems)) {
+    console.error('renderMenuTableWithPagination: menuItems is not an array:', menuItems);
+    menuItems = Array.isArray(filteredMenuItems) ? filteredMenuItems : [];
+  }
 
   const totalPages = Math.ceil(menuItems.length / menuItemsPerPage);
   
@@ -798,7 +950,7 @@ function renderMenuTableWithPagination(menuItems) {
   if (currentMenuItems.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="text-center text-muted">
+        <td colspan="5" class="text-center text-muted">
           <i class="fas fa-utensils fa-2x mb-2"></i>
           <div>No menu items found</div>
         </td>
@@ -819,23 +971,21 @@ function renderMenuTableWithPagination(menuItems) {
         <td><span class="badge bg-secondary">${item.category || 'N/A'}</span></td>
         <td><span class="fw-bold text-success">₱${item.price || '0.00'}</span></td>
         <td>
-          <small class="text-muted">
+          <span class="badge bg-info">
             ${item.ingredients && item.ingredients.length > 0 
-              ? item.ingredients.map(ing => ing.name).join(', ') 
-              : 'No ingredients listed'}
-          </small>
-        </td>
-        <td>
-          <span class="badge ${item.isAvailable ? 'bg-success' : 'bg-danger'}">
-            ${item.isAvailable ? 'Available' : 'Unavailable'}
+              ? `${item.ingredients.length} ingredient${item.ingredients.length !== 1 ? 's' : ''}`
+              : '0 ingredients'}
           </span>
         </td>
         <td>
           <div class="btn-group" role="group">
-            <button class="btn btn-sm btn-outline-primary" onclick="editMenuItem('${item._id}')" title="Edit">
+            <button class="btn btn-sm btn-outline-info me-2" onclick="viewMenuItem('${item._id}')" title="View">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-warning me-2" onclick="editMenuItem('${item._id}')" title="Edit">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteMenuItem('${item._id}')" title="Delete">
+            <button class="btn btn-sm btn-outline-danger me-2" onclick="deleteMenuItem('${item._id}')" title="Delete">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -864,60 +1014,107 @@ async function editMenuItem(id) {
 
     const data = await response.json();
     const menuItem = data.data;
+    
+    console.log('Menu item data received for editing:', menuItem);
+    console.log('Ingredients data:', menuItem.ingredients);
 
-    // Create edit form HTML with smaller inputs
+    // Create modern edit form HTML
     const editForm = `
       <form id="editMenuForm">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="editMenuName" class="form-label">Menu Name</label>
-            <input type="text" class="form-control form-control-sm" id="editMenuName" value="${menuItem.name}" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="editMenuPrice" class="form-label">Price</label>
-            <input type="number" class="form-control form-control-sm" id="editMenuPrice" value="${menuItem.price}" step="0.01" required>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="editMenuCategory" class="form-label">Category</label>
-            <select class="form-select form-select-sm" id="editMenuCategory" required>
-              <option value="ramen" ${menuItem.category === 'ramen' ? 'selected' : ''}>Ramen</option>
-              <option value="ricebowl" ${menuItem.category === 'ricebowl' ? 'selected' : ''}>Rice Bowl</option>
-              <option value="sides" ${menuItem.category === 'sides' ? 'selected' : ''}>Sides</option>
-              <option value="drinks" ${menuItem.category === 'drinks' ? 'selected' : ''}>Drinks</option>
-            </select>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="editMenuImage" class="form-label">Image</label>
-            <div class="input-group input-group-sm">
-              <input type="text" class="form-control" id="editMenuImage" value="${menuItem.image || ''}" placeholder="Enter image URL">
-              <input type="file" class="form-control" id="editMenuImageFile" accept="image/*" style="display: none;" onchange="window.handleImageFileSelect(event)">
-              <button class="btn btn-outline-secondary" type="button" onclick="window.toggleImageInput()">
-                <i class="fas fa-upload"></i>
-              </button>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="text" class="form-control" id="editMenuName" value="${menuItem.name}" placeholder="Menu Name" required>
+              <label for="editMenuName" class="form-label">
+                <i class="fas fa-utensils me-2 text-primary"></i>Menu Name
+              </label>
             </div>
-            <small class="text-muted">Enter URL or click upload to choose file</small>
+          </div>
+          <div class="col-md-6">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="editMenuPrice" value="${menuItem.price}" step="0.01" placeholder="Price" required>
+              <label for="editMenuPrice" class="form-label">
+                <i class="fas fa-tag me-2 text-success"></i>Price (₱)
+              </label>
+            </div>
           </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Ingredients</label>
-          <div id="editIngredientsList" style="max-height: 200px; overflow-y: auto;">
+        
+        <div class="row g-3 mt-2">
+          <div class="col-md-6">
+            <div class="form-floating">
+              <select class="form-select" id="editMenuCategory" required>
+                <option value="">Choose category...</option>
+                <option value="ramen" ${menuItem.category === 'ramen' ? 'selected' : ''}>🍜 Ramen</option>
+                <option value="ricebowl" ${menuItem.category === 'ricebowl' ? 'selected' : ''}>🍚 Rice Bowl</option>
+                <option value="sides" ${menuItem.category === 'sides' ? 'selected' : ''}>🥢 Sides</option>
+                <option value="drinks" ${menuItem.category === 'drinks' ? 'selected' : ''}>🥤 Drinks</option>
+              </select>
+              <label for="editMenuCategory" class="form-label">
+                <i class="fas fa-folder me-2 text-info"></i>Category
+              </label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="editMenuImage" class="form-label">
+                <i class="fas fa-image me-2 text-warning"></i>Image
+              </label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="editMenuImage" value="${menuItem.image || ''}" placeholder="Image URL">
+                <input type="file" class="form-control" id="editMenuImageFile" accept="image/*" style="display: none;" onchange="window.handleImageFileSelect(event)">
+                <button class="btn btn-outline-secondary" type="button" onclick="window.toggleImageInput()">
+                  <i class="fas fa-upload"></i>
+                </button>
+              </div>
+              <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>Enter URL or click upload to choose file
+              </small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-dark mb-0">
+              <i class="fas fa-list me-2 text-primary"></i>Ingredients
+            </h6>
+            <button type="button" class="btn btn-primary btn-sm rounded-pill" onclick="addEditIngredient()">
+              <i class="fas fa-plus me-1"></i>Add Ingredient
+            </button>
+          </div>
+          <div id="editIngredientsList" class="bg-light rounded-3 p-3" style="max-height: 250px; overflow-y: auto; border: 2px dashed #dee2e6;">
             ${menuItem.ingredients && menuItem.ingredients.length > 0 
               ? menuItem.ingredients.map((ing, index) => `
-                  <div class="d-flex mb-2">
-                    <input type="text" class="form-control form-control-sm me-2" value="${ing.inventoryItem}" placeholder="Ingredient name" readonly>
-                    <input type="number" class="form-control form-control-sm me-2" value="${ing.quantity}" placeholder="Quantity" step="0.1" style="width: 100px;">
-                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeEditIngredient(this)" title="Remove ingredient">
-                      <i class="fas fa-trash"></i>
-                    </button>
+                  <div class="card mb-2 edit-ingredient-row" data-index="${index}">
+                    <div class="card-body p-2">
+                      <div class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                          <select class="form-select form-select-sm" name="ingredient_${index}" required>
+                            <option value="">Select ingredient...</option>
+                          </select>
+                        </div>
+              <div class="col-md-4">
+                <input type="number" class="form-control form-control-sm" name="quantity_${index}" value="${ing.quantity}" placeholder="Quantity" step="0.1" min="0.1" required>
+              </div>
+                        <div class="col-md-1">
+                          <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeEditIngredient(this)" title="Remove ingredient">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 `).join('')
-              : '<p class="text-muted small">No ingredients</p>'
+              : '<div class="text-center text-muted py-4"><i class="fas fa-plus-circle fa-2x mb-2"></i><br>No ingredients added yet</div>'
             }
           </div>
         </div>
-        <div id="editMenuError" class="alert alert-danger" style="display: none;"></div>
+        
+        <div id="editMenuError" class="alert alert-danger mt-3" style="display: none;">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <span class="error-message"></span>
+        </div>
       </form>
     `;
 
@@ -930,7 +1127,49 @@ async function editMenuItem(id) {
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#28a745',
       cancelButtonColor: '#6c757d',
-      width: '500px',
+      width: '600px',
+      didOpen: async () => {
+        // Populate ingredient selects after modal opens
+        await populateAllEditIngredientSelects();
+        
+        // Set current ingredient selections
+        const selects = document.querySelectorAll('#editIngredientsList select[name^="ingredient_"]');
+        selects.forEach((select, index) => {
+          const currentIngredient = menuItem.ingredients[index];
+          if (currentIngredient) {
+            console.log(`Setting ingredient ${index}:`, currentIngredient);
+            
+            // inventoryItem is the name, not ID - we need to find the matching option by name
+            const ingredientName = currentIngredient.inventoryItem;
+            console.log(`Ingredient name for ${index}:`, ingredientName);
+            
+            if (ingredientName) {
+              // Wait a bit for options to be populated
+              setTimeout(() => {
+                // Find the option that matches the ingredient name
+                const options = select.querySelectorAll('option');
+                let matchingOption = null;
+                
+                for (const option of options) {
+                  if (option.textContent.includes(ingredientName)) {
+                    matchingOption = option;
+                    break;
+                  }
+                }
+                
+                if (matchingOption) {
+                  select.value = matchingOption.value;
+                  console.log(`Set select value to: ${matchingOption.value} for ingredient: ${ingredientName}`);
+                } else {
+                  console.log(`No matching option found for ingredient: ${ingredientName}`);
+                }
+              }, 200);
+            }
+          }
+        });
+        
+        // No unit auto-fill needed since we removed units
+      },
       preConfirm: async () => {
         const name = document.getElementById('editMenuName').value;
         const price = document.getElementById('editMenuPrice').value;
@@ -973,8 +1212,32 @@ async function editMenuItem(id) {
             console.log('Appending image URL to FormData:', image);
           }
 
-          // TODO: Add logic to gather updated ingredients from the form
-          formData.append('ingredients', JSON.stringify([]));
+          // Collect ingredients from the form
+          const ingredients = [];
+          const ingredientRows = document.querySelectorAll('#editIngredientsList .edit-ingredient-row');
+          ingredientRows.forEach(row => {
+            const select = row.querySelector('select[name^="ingredient_"]');
+            const quantityInput = row.querySelector('input[name^="quantity_"]');
+            
+            if (select && select.value && quantityInput && quantityInput.value) {
+              // Get the ingredient name from the selected option text
+              const selectedOption = select.querySelector(`option[value="${select.value}"]`);
+              const ingredientName = selectedOption ? selectedOption.textContent.split(' (')[0] : select.value;
+              
+              ingredients.push({
+                inventoryItem: ingredientName,
+                quantity: parseFloat(quantityInput.value) || 1
+              });
+              
+              console.log('Added ingredient:', {
+                inventoryItem: ingredientName,
+                quantity: parseFloat(quantityInput.value) || 1
+              });
+            }
+          });
+          
+          console.log('All ingredients to send:', ingredients);
+          formData.append('ingredients', JSON.stringify(ingredients));
 
           console.log('Sending FormData for menu update...');
           const updateResponse = await fetch(`${MENU_UPDATE_URL}${id}`, {
@@ -1015,6 +1278,113 @@ async function editMenuItem(id) {
 // Helper function to remove ingredient from edit form
 function removeEditIngredient(button) {
   button.parentElement.remove();
+  updateEditIngredientIndices();
+}
+
+// Helper function to add new ingredient row
+function addEditIngredient() {
+  const ingredientsList = document.getElementById('editIngredientsList');
+  if (!ingredientsList) return;
+  
+  const currentRows = ingredientsList.querySelectorAll('.edit-ingredient-row').length;
+  const newIndex = currentRows;
+  
+  const newRow = document.createElement('div');
+  newRow.className = 'card mb-2 edit-ingredient-row';
+  newRow.setAttribute('data-index', newIndex);
+  newRow.innerHTML = `
+    <div class="card-body p-2">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-7">
+          <select class="form-select form-select-sm" name="ingredient_${newIndex}" required>
+            <option value="">Select ingredient...</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <input type="number" class="form-control form-control-sm" name="quantity_${newIndex}" placeholder="Quantity" step="0.1" min="0.1" required>
+        </div>
+        <div class="col-md-1">
+          <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeEditIngredient(this)" title="Remove ingredient">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove the "no ingredients" message if it exists
+  const noIngredientsMsg = ingredientsList.querySelector('p.text-muted');
+  if (noIngredientsMsg) {
+    noIngredientsMsg.remove();
+  }
+  
+  ingredientsList.appendChild(newRow);
+  
+  // Populate the select with available ingredients
+  populateEditIngredientSelect(newRow.querySelector('select'));
+  
+  // No unit auto-fill needed since we removed units
+}
+
+// Helper function to update ingredient row indices after removal
+function updateEditIngredientIndices() {
+  const ingredientsList = document.getElementById('editIngredientsList');
+  if (!ingredientsList) return;
+  
+  const rows = ingredientsList.querySelectorAll('.edit-ingredient-row');
+  rows.forEach((row, index) => {
+    row.setAttribute('data-index', index);
+    const select = row.querySelector('select');
+    const quantityInput = row.querySelector('input[type="number"]');
+    const unitInput = row.querySelector('input[type="text"]');
+    
+    if (select) select.name = `ingredient_${index}`;
+    if (quantityInput) quantityInput.name = `quantity_${index}`;
+    if (unitInput) unitInput.name = `unit_${index}`;
+  });
+  
+  // Show "no ingredients" message if no rows left
+  if (rows.length === 0) {
+    ingredientsList.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-plus-circle fa-2x mb-2"></i><br>No ingredients added yet</div>';
+  }
+}
+
+// Helper function to populate ingredient select dropdown
+async function populateEditIngredientSelect(selectElement) {
+  if (!selectElement) return;
+  
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${getApiUrl()}/inventory/all`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const ingredients = Array.isArray(data) ? data : data.data || [];
+      
+      // Clear existing options except the first one
+      selectElement.innerHTML = '<option value="">Select ingredient...</option>';
+      
+      ingredients.forEach(ingredient => {
+        const option = document.createElement('option');
+        option.value = ingredient._id;
+        option.textContent = `${ingredient.name} (${ingredient.stocks} ${ingredient.units})`;
+        option.dataset.unit = ingredient.units;
+        selectElement.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching ingredients:', error);
+  }
+}
+
+// Helper function to populate all ingredient selects in edit form
+async function populateAllEditIngredientSelects() {
+  const selects = document.querySelectorAll('#editIngredientsList select[name^="ingredient_"]');
+  for (const select of selects) {
+    await populateEditIngredientSelect(select);
+  }
 }
 
 // Toggle between URL input and file input
@@ -1057,10 +1427,139 @@ function handleImageFileSelect(event) {
   }
 }
 
+// View menu item details
+async function viewMenuItem(id) {
+  try {
+    // Fetch menu item details
+    const response = await fetch(`${getApiUrl()}/menu/${id}`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch menu item details');
+    }
+
+    const data = await response.json();
+    const menuItem = data.data;
+
+    // Create view modal HTML
+    const viewModal = `
+      <div class="modal fade" id="viewMenuModal" tabindex="-1" aria-labelledby="viewMenuModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+              <h5 class="modal-title" id="viewMenuModalLabel">
+                <i class="fas fa-utensils me-2"></i>Menu Item Details
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="text-center mb-3">
+                    ${menuItem.image ? 
+                      `<img src="${getImageUrl(menuItem.image)}" alt="${menuItem.name}" class="img-fluid rounded" style="max-height: 200px; object-fit: cover;" onerror="this.src='../assets/ramen1.jpg'">` : 
+                      `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-utensils fa-3x text-muted"></i>
+                      </div>`
+                    }
+                  </div>
+                </div>
+                <div class="col-md-8">
+                  <h4 class="fw-bold text-primary mb-3">${menuItem.name}</h4>
+                  
+                  <div class="row mb-3">
+                    <div class="col-sm-6">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-tag text-success me-2"></i>
+                        <strong>Price:</strong>
+                        <span class="ms-2 fs-5 text-success fw-bold">₱${menuItem.price || '0.00'}</span>
+                      </div>
+                    </div>
+                    <div class="col-sm-6">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-folder text-info me-2"></i>
+                        <strong>Category:</strong>
+                        <span class="badge bg-secondary ms-2">${menuItem.category || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  ${menuItem.description ? `
+                    <div class="mb-3">
+                      <h6 class="fw-bold text-dark mb-2">
+                        <i class="fas fa-align-left text-muted me-2"></i>Description
+                      </h6>
+                      <p class="text-muted">${menuItem.description}</p>
+                    </div>
+                  ` : ''}
+
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-dark mb-2">
+                      <i class="fas fa-list text-muted me-2"></i>Ingredients (${menuItem.ingredients ? menuItem.ingredients.length : 0})
+                    </h6>
+                    ${menuItem.ingredients && menuItem.ingredients.length > 0 ? `
+                      <div class="row">
+                        ${menuItem.ingredients.map(ing => `
+                          <div class="col-md-6 mb-2">
+                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                              <span class="fw-medium">${ing.name || ing.inventoryItem || 'Unknown'}</span>
+                              <span class="badge bg-primary">${ing.quantity || 1} ${ing.unit || 'unit'}</span>
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : `
+                      <div class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        No ingredients listed
+                      </div>
+                    `}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-1"></i>Close
+              </button>
+              <button type="button" class="btn btn-primary" onclick="editMenuItem('${menuItem._id}'); bootstrap.Modal.getInstance(document.getElementById('viewMenuModal')).hide();">
+                <i class="fas fa-edit me-1"></i>Edit Item
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('viewMenuModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', viewModal);
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('viewMenuModal'));
+    modal.show();
+
+    // Clean up modal when hidden
+    document.getElementById('viewMenuModal').addEventListener('hidden.bs.modal', function() {
+      this.remove();
+    });
+
+  } catch (error) {
+    Swal.fire('Error', error.message, 'error');
+  }
+}
+
 // Make functions globally available
 window.removeEditIngredient = removeEditIngredient;
+window.addEditIngredient = addEditIngredient;
 window.editMenuItem = editMenuItem;
 window.deleteMenuItem = deleteMenuItem;
+window.viewMenuItem = viewMenuItem;
 window.toggleImageInput = toggleImageInput;
 window.handleImageFileSelect = handleImageFileSelect;
 
@@ -1119,6 +1618,89 @@ async function deleteMenuItem(id) {
   }
 }
 
+// Setup menu table sorting
+function setupMenuSorting() {
+  const sortableHeaders = document.querySelectorAll('.sortable');
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const column = this.dataset.column;
+      
+      // Toggle sort direction
+      if (menuSortColumn === column) {
+        menuSortDirection = menuSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        menuSortColumn = column;
+        menuSortDirection = 'asc';
+      }
+      
+      // Update sort icons
+      updateSortIcons();
+      
+      // Sort and render menu items
+      sortMenuItems();
+      renderMenuTableWithPagination();
+    });
+  });
+}
+
+// Update sort icons in table headers
+function updateSortIcons() {
+  const sortableHeaders = document.querySelectorAll('.sortable');
+  sortableHeaders.forEach(header => {
+    const icon = header.querySelector('i');
+    const column = header.dataset.column;
+    
+    if (column === menuSortColumn) {
+      icon.className = menuSortDirection === 'asc' ? 'fas fa-sort-up ms-1' : 'fas fa-sort-down ms-1';
+    } else {
+      icon.className = 'fas fa-sort ms-1';
+    }
+  });
+}
+
+// Sort menu items based on current sort column and direction
+function sortMenuItems() {
+  // Ensure filteredMenuItems is an array before sorting
+  if (!Array.isArray(filteredMenuItems)) {
+    console.error('sortMenuItems: filteredMenuItems is not an array:', filteredMenuItems);
+    filteredMenuItems = [];
+    return;
+  }
+  
+  filteredMenuItems.sort((a, b) => {
+    let aValue, bValue;
+    
+    switch (menuSortColumn) {
+      case 'name':
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        break;
+      case 'category':
+        aValue = a.category.toLowerCase();
+        bValue = b.category.toLowerCase();
+        break;
+      case 'price':
+        aValue = parseFloat(a.price);
+        bValue = parseFloat(b.price);
+        break;
+      case 'ingredients':
+        aValue = a.ingredients ? a.ingredients.length : 0;
+        bValue = b.ingredients ? b.ingredients.length : 0;
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aValue < bValue) {
+      return menuSortDirection === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return menuSortDirection === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+}
+
 // Tab change event listeners (added to existing DOMContentLoaded)
 function initializeTabListeners() {
   // Add event listeners for tab changes
@@ -1136,6 +1718,106 @@ function initializeTabListeners() {
     menuTab.addEventListener('shown.bs.tab', function() {
       // Load menu items when menu tab is shown
       fetchMenuItems();
+    });
+  }
+  
+  // Menu search functionality
+  const menuSearchInput = document.getElementById('menuSearchInput');
+  const clearMenuSearch = document.getElementById('clearMenuSearch');
+  
+  if (menuSearchInput) {
+    menuSearchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      
+      // Filter menu items based on search term across multiple fields
+      filteredMenuItems = allMenuItems.filter(item => {
+        // Search in name
+        const nameMatch = item.name.toLowerCase().includes(searchTerm);
+        
+        // Search in category
+        const categoryMatch = item.category.toLowerCase().includes(searchTerm);
+        
+        // Search in price (convert to string for partial matching)
+        const priceMatch = item.price.toString().includes(searchTerm);
+        
+        // Search in ingredients (check ingredient names)
+        const ingredientsMatch = item.ingredients && item.ingredients.some(ingredient => 
+          ingredient.inventoryItem && ingredient.inventoryItem.toLowerCase().includes(searchTerm)
+        );
+        
+        return nameMatch || categoryMatch || priceMatch || ingredientsMatch;
+      });
+      
+      // Apply sorting
+      sortMenuItems();
+      
+      // Reset to first page and render
+      currentMenuPage = 1;
+      renderMenuTableWithPagination();
+    });
+  }
+  
+  if (clearMenuSearch) {
+    clearMenuSearch.addEventListener('click', function() {
+      menuSearchInput.value = '';
+      filteredMenuItems = [...allMenuItems];
+      sortMenuItems();
+      currentMenuPage = 1;
+      renderMenuTableWithPagination();
+    });
+  }
+  
+  // Inventory search functionality
+  const inventorySearchInput = document.getElementById('inventorySearchInput');
+  const clearInventorySearch = document.getElementById('clearInventorySearch');
+  
+  if (inventorySearchInput) {
+    inventorySearchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      
+      // Ensure allIngredients is an array before filtering
+      if (!Array.isArray(allIngredients)) {
+        console.error('inventorySearchInput: allIngredients is not an array:', allIngredients);
+        allIngredients = [];
+      }
+      
+      // Filter inventory items based on search term across multiple fields
+      filteredIngredients = allIngredients.filter(item => {
+        // Search in name
+        const nameMatch = item.name && item.name.toLowerCase().includes(searchTerm);
+        
+        // Search in stocks (convert to string for partial matching)
+        const stocksMatch = item.stocks && item.stocks.toString().includes(searchTerm);
+        
+        // Search in units
+        const unitsMatch = item.units && item.units.toLowerCase().includes(searchTerm);
+        
+        // Search in restocked date (convert to string for partial matching)
+        const restockedMatch = item.restocked && new Date(item.restocked).toLocaleDateString().includes(searchTerm);
+        
+        // Search in status
+        const statusMatch = item.status && item.status.toLowerCase().includes(searchTerm);
+        
+        return nameMatch || stocksMatch || unitsMatch || restockedMatch || statusMatch;
+      });
+      
+      // Reset to first page and render
+      currentPage = 1;
+      renderIngredientsTableWithPagination();
+    });
+  }
+  
+  if (clearInventorySearch) {
+    clearInventorySearch.addEventListener('click', function() {
+      inventorySearchInput.value = '';
+      // Ensure allIngredients is an array before copying
+      if (Array.isArray(allIngredients)) {
+        filteredIngredients = [...allIngredients];
+      } else {
+        filteredIngredients = [];
+      }
+      currentPage = 1;
+      renderIngredientsTableWithPagination();
     });
   }
   

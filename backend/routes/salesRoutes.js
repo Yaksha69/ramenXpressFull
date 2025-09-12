@@ -6,6 +6,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 // Create a new sale (accessible by both admin and cashier)
 router.post('/new-sale', authMiddleware, salesController.createSale);
 
+// Create multiple sales with single order ID (for POS orders)
+router.post('/new-multiple-sales', authMiddleware, salesController.createMultipleSales);
+
+// Reset counter (for debugging/admin use)
+router.post('/reset-counter', authMiddleware, salesController.resetCounter);
+
 // Middleware to check if user is admin or cashier
 const isAdminOrCashier = function (req, res, next) {
   if (req.user && (req.user.role === 'admin' || req.user.role === 'cashier')) {
@@ -19,6 +25,12 @@ router.use(authMiddleware);
 
 // Get all sales (admin and cashier)
 router.get('/all-sales', isAdminOrCashier, salesController.getAllSales);
+
+// Get sales summary with total orders count (admin and cashier)
+router.get('/sales-summary', isAdminOrCashier, salesController.getSalesSummary);
+
+// Get aggregated product sales (admin and cashier)
+router.get('/product-sales', isAdminOrCashier, salesController.getProductSales);
 
 // Get a sale by orderID (admin and cashier)
 router.get('/order/:orderID', isAdminOrCashier, salesController.getSaleByOrderID);

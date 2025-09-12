@@ -9,7 +9,7 @@ let currentModalItem = null;
 let selectedAddons = [];
 
 // API Base URL - using config system
-const API_BASE_URL = getApiUrl();
+// Use API_BASE_URL from config.js
 
 // Authentication utilities
 function getAuthToken() {
@@ -90,9 +90,21 @@ async function apiRequest(endpoint, options = {}) {
         }
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`HTTP ${response.status} error:`, errorText);
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorData;
+            try {
+                errorData = await response.json();
+                console.error(`HTTP ${response.status} error data:`, JSON.stringify(errorData, null, 2));
+            } catch (e) {
+                const errorText = await response.text();
+                errorData = { message: errorText };
+                console.error(`HTTP ${response.status} error text:`, errorText);
+            }
+            
+            // Create a more detailed error object
+            const error = new Error(`HTTP error! status: ${response.status}`);
+            error.status = response.status;
+            error.data = errorData;
+            throw error;
         }
 
         const data = await response.json();
@@ -145,6 +157,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     setupModals();
     updateCart();
+    
+    // Add test button for notifications (for development/testing)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Test notification button
+        const testButton = document.createElement('button');
+        testButton.textContent = 'Test Notification';
+        testButton.className = 'btn btn-info btn-sm position-fixed';
+        testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+        testButton.onclick = function() {
+            showGlobalNotification('Test notification from POS!', 'success');
+        };
+        document.body.appendChild(testButton);
+        
+        // Test order processing notification button
+        const testOrderButton = document.createElement('button');
+        testOrderButton.textContent = 'Test Order Processing';
+        testOrderButton.className = 'btn btn-warning btn-sm position-fixed';
+        testOrderButton.style.cssText = 'bottom: 60px; right: 20px; z-index: 9999;';
+        testOrderButton.onclick = function() {
+            testOrderProcessingNotification();
+        };
+        document.body.appendChild(testOrderButton);
+    }
 });
 
 // Setup Bootstrap modals
@@ -172,7 +207,7 @@ function setupModals() {
 // Load menu items from API
 async function loadMenuItems() {
     try {
-        const response = await apiRequest('/menu/all');
+        const response = await apiRequest('/menu/all-with-stock');
         console.log('API Response:', response);
         
         if (response && response.success) {
@@ -225,8 +260,7 @@ function setupEventListeners() {
             button.classList.add('active');
             const orderTypeMap = {
                 'Dine-in': 'dine-in',
-                'Takeout': 'takeout',
-                'Pickup': 'takeout'
+                'Takeout': 'takeout'
             };
             orderType = orderTypeMap[button.dataset.orderType] || 'dine-in';
         });
@@ -306,19 +340,24 @@ function setupEventListeners() {
     // Sidebar Toggle
     const sidebarToggle = document.getElementById('sidebarToggle');
     const closeSidebar = document.getElementById('closeSidebar');
+    const sidebarMenu = document.getElementById('sidebarMenu');
     
-    if (sidebarToggle) {
+    if (sidebarToggle && sidebarMenu) {
         sidebarToggle.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('show');
+            sidebarMenu.classList.toggle('show');
         });
     }
 
-    if (closeSidebar) {
+    if (closeSidebar && sidebarMenu) {
         closeSidebar.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.remove('show');
+            sidebarMenu.classList.remove('show');
         });
     }
+
+    // Bootstrap accordions handle their own collapse behavior
 }
+
+// Bootstrap accordions handle their own collapse behavior automatically
 
 // Format category for display
 function formatCategory(category) {
@@ -358,9 +397,22 @@ function renderMenuItems() {
         const imageUrl = getImageUrl(backendImage);
         console.log(`Rendering ${item.name} with backend image: ${backendImage} -> ${imageUrl}`);
         
+        // Determine card styling based on stock status
+        let cardClass = "card h-100 menu-item-card";
+        let stockBadge = "";
+        
+        if (!item.canBeOrdered) {
+            cardClass += " out-of-stock-card";
+            stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">Some Out of Stock</span>';
+        } else if (item.hasLowStock) {
+            cardClass += " low-stock-card";
+            stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">Low Stock</span>';
+        }
+        
         return `
             <div class="col-6 col-md-4 col-lg-3">
-                <div class="card h-100 menu-item-card" onclick="openModal('${item._id}', '${item.name}', ${item.price}, '${item.category}', '${backendImage}')">
+                <div class="${cardClass}" onclick="openModal('${item._id}', '${item.name}', ${item.price}, '${item.category}', '${backendImage}')">
+                    ${stockBadge}
                     <img src="${imageUrl}" class="card-img-top" alt="${item.name}" style="height: 150px; object-fit: cover;" onerror="this.src='../assets/ramen1.jpg'">
                     <div class="card-body p-2">
                         <h6 class="card-title mb-1">${item.name}</h6>
@@ -423,12 +475,19 @@ function getImageUrl(imagePath) {
 function openModal(itemId, itemName, itemPrice, itemCategory, itemImage) {
     console.log('Opening modal with backend image:', itemImage);
     
+    // Find the menu item with inventory data
+    const menuItem = menuItems.find(item => item._id === itemId);
+    
     currentModalItem = {
         id: itemId,
         name: itemName,
         price: itemPrice,
         category: itemCategory,
-        image: itemImage
+        image: itemImage,
+        canBeOrdered: menuItem ? menuItem.canBeOrdered : true,
+        hasOutOfStock: menuItem ? menuItem.hasOutOfStock : false,
+        hasLowStock: menuItem ? menuItem.hasLowStock : false,
+        ingredientsWithStock: menuItem ? menuItem.ingredientsWithStock : []
     };
 
     // Reset modal state
@@ -442,8 +501,12 @@ function openModal(itemId, itemName, itemPrice, itemCategory, itemImage) {
     document.getElementById('modalItemPrice').textContent = `₱${itemPrice.toFixed(2)}`;
     document.getElementById('modalQuantity').value = '1';
 
-    // Show/hide sections based on category
-    toggleModalSections(itemCategory);
+    // Show stock status in modal
+    updateModalStockStatus();
+
+    // Load ingredients and add-ons for the new collapsible design
+    loadMenuIngredients(itemId);
+    loadAddOns();
 
     // Update total
     updateModalTotal();
@@ -454,18 +517,73 @@ function openModal(itemId, itemName, itemPrice, itemCategory, itemImage) {
     }
 }
 
+// Update modal stock status display
+function updateModalStockStatus() {
+    if (!currentModalItem) return;
+    
+    // Find or create stock status container
+    let stockStatusContainer = document.getElementById('modalStockStatus');
+    if (!stockStatusContainer) {
+        // Create stock status container after the price
+        const priceElement = document.getElementById('modalItemPrice');
+        stockStatusContainer = document.createElement('div');
+        stockStatusContainer.id = 'modalStockStatus';
+        stockStatusContainer.className = 'mt-2';
+        priceElement.parentNode.insertBefore(stockStatusContainer, priceElement.nextSibling);
+    }
+    
+    // Clear previous content
+    stockStatusContainer.innerHTML = '';
+    
+    if (!currentModalItem.canBeOrdered) {
+        // Item has out of stock ingredients - no warning message shown
+        stockStatusContainer.innerHTML = '';
+    } else if (currentModalItem.hasLowStock) {
+        // Item has low stock
+        stockStatusContainer.innerHTML = `
+            <div class="alert alert-warning py-2 mb-2">
+                <i class="fas fa-exclamation-circle me-1"></i>
+                <strong>Limited availability</strong> - Some ingredients running low
+            </div>
+        `;
+        
+        // Show low stock ingredients
+        if (currentModalItem.ingredientsWithStock && currentModalItem.ingredientsWithStock.length > 0) {
+            const lowStockIngredients = currentModalItem.ingredientsWithStock.filter(ing => ing.isLowStock);
+            if (lowStockIngredients.length > 0) {
+                const lowStockList = document.createElement('div');
+                lowStockList.className = 'text-warning small';
+                lowStockList.innerHTML = `
+                    <strong>Low stock ingredients:</strong><br>
+                    ${lowStockIngredients.map(ing => `• ${ing.inventoryItem} (Need: ${ing.requiredQuantity}, Available: ${ing.currentStock})`).join('<br>')}
+                `;
+                stockStatusContainer.appendChild(lowStockList);
+            }
+        }
+    } else {
+        // Item is fully available
+        stockStatusContainer.innerHTML = `
+            <div class="alert alert-success py-2 mb-2">
+                <i class="fas fa-check-circle me-1"></i>
+                <strong>Available</strong> - All ingredients in stock
+            </div>
+        `;
+    }
+}
+
 // Reset modal state
 function resetModalState() {
-    // Reset add-ons
-    document.querySelectorAll('.addon-card input[type="checkbox"]').forEach(checkbox => {
+    // Reset all checkboxes
+    document.querySelectorAll('#ingredientsGrid input[type="checkbox"], #addOnsGrid input[type="checkbox"]').forEach(checkbox => {
         checkbox.checked = false;
     });
+
+    // Remove selected classes from all cards
+    document.querySelectorAll('#ingredientsGrid .card, #addOnsGrid .card').forEach(card => {
+        card.classList.remove('bg-danger', 'bg-opacity-10', 'bg-success', 'bg-opacity-10');
+    });
+
     selectedAddons = [];
-
-
-
-    // Reset add-ons selection
-    this.selectedAddons = [];
 }
 
 // Toggle modal sections and load add-ons
@@ -556,9 +674,9 @@ function loadAddOnsFromMenu() {
 // Handle addon selection
 function handleAddonSelection(checkbox) {
     const addonId = checkbox.id;
-    const addonCard = checkbox.closest('.addon-card');
-    const addonPrice = parseFloat(addonCard.dataset.price);
-    const addonName = addonCard.querySelector('small').textContent;
+    const addonCard = checkbox.closest('.card');
+    const addonPrice = parseFloat(addonCard.querySelector('small.text-success').textContent.replace('+₱', ''));
+    const addonName = addonCard.querySelector('small.fw-bold').textContent;
     
     // Extract the actual ObjectId from the checkbox ID
     // Checkbox ID format: "addon_6879a1f70355e876dc25c9d9" -> extract "6879a1f70355e876dc25c9d9"
@@ -573,20 +691,211 @@ function handleAddonSelection(checkbox) {
     });
 
     if (checkbox.checked) {
+        addonCard.classList.add('bg-success', 'bg-opacity-10');
         selectedAddons.push({
             id: actualAddonId, // Store the actual ObjectId
             checkboxId: addonId, // Keep checkbox ID for UI operations
             name: addonName,
-            price: addonPrice
+            price: addonPrice,
+            action: 'add' // Mark as add-on
         });
     } else {
+        addonCard.classList.remove('bg-success', 'bg-opacity-10');
         selectedAddons = selectedAddons.filter(addon => addon.checkboxId !== addonId);
     }
     
-    console.log('Current selected addons:', selectedAddons);
+    console.log('Current selected addons:', selectedAddons.filter(item => item.action === 'add'));
+    updateModalTotal();
 }
 
+// Load menu ingredients for removal
+async function loadMenuIngredients(menuItemId) {
+    const ingredientsGrid = document.getElementById('ingredientsGrid');
+    if (!ingredientsGrid) return;
 
+    try {
+        console.log('Loading ingredients for menu item:', menuItemId);
+        
+        // Get the specific menu item to get its ingredients
+        const menuItemResponse = await apiRequest(`/menu/${menuItemId}`);
+        console.log('Menu item response:', menuItemResponse);
+        
+        // Extract the actual menu item data from the response
+        const menuItem = menuItemResponse.data || menuItemResponse;
+        console.log('Menu item data:', menuItem);
+        
+        if (!menuItem || !menuItem.ingredients || menuItem.ingredients.length === 0) {
+            console.log('No ingredients found in menu item, showing message');
+            ingredientsGrid.innerHTML = '<div class="col-12 text-center text-muted">No ingredients available for removal</div>';
+            return;
+        }
+
+        console.log('Menu item ingredients:', menuItem.ingredients);
+
+        // Get current modal item with stock information
+        const currentItem = menuItems.find(item => item._id === menuItemId);
+        const stockInfo = currentItem ? currentItem.ingredientsWithStock : [];
+        
+        // Use the ingredients directly from the menu item with stock information
+        const availableIngredients = menuItem.ingredients.map(ing => {
+            const stockData = stockInfo.find(stock => stock.inventoryItem === ing.inventoryItem);
+            return {
+                name: ing.inventoryItem,
+                units: 'pieces', // Default units since we don't have this info from menu
+                quantity: ing.quantity,
+                currentStock: stockData ? stockData.currentStock : 0,
+                isOutOfStock: stockData ? stockData.isOutOfStock : false,
+                isLowStock: stockData ? stockData.isLowStock : false
+            };
+        });
+        console.log('Available ingredients for removal:', availableIngredients);
+
+        if (availableIngredients.length === 0) {
+            ingredientsGrid.innerHTML = '<div class="col-12 text-center text-muted">No ingredients available for removal</div>';
+            return;
+        }
+
+        // Render ingredient cards using Bootstrap
+        ingredientsGrid.innerHTML = availableIngredients.map(ingredient => {
+            // Determine card styling based on stock status
+            let cardClass = "card h-100";
+            let stockBadge = "";
+            
+            if (ingredient.isOutOfStock) {
+                cardClass += " border-danger";
+                stockBadge = '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Out</span>';
+            } else if (ingredient.isLowStock) {
+                cardClass += " border-warning";
+                stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Low</span>';
+            } else {
+                cardClass += " border-success";
+            }
+            
+            return `
+                <div class="col-6">
+                    <div class="${cardClass} position-relative" data-ingredient="${ingredient.name}" style="height: 70px;">
+                        ${stockBadge}
+                        <div class="card-body p-2 d-flex align-items-center">
+                            <div class="form-check d-flex align-items-center flex-grow-1">
+                                <input class="form-check-input me-3" type="checkbox" id="ingredient_${ingredient.name}" 
+                                       data-ingredient="${ingredient.name}" data-quantity="${ingredient.quantity}"
+                                       onchange="handleIngredientSelection(this)">
+                                <div class="vr me-3" style="height: 30px; opacity: 0.3; border-color: #dc3545;"></div>
+                                <label class="form-check-label flex-grow-1" for="ingredient_${ingredient.name}">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">${ingredient.name}</div>
+                                        <small class="text-muted" style="font-size: 11px;">${ingredient.units}</small>
+                                        <div class="text-primary fw-bold" style="font-size: 12px;">Stock: ${ingredient.currentStock}</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        console.log('Rendered ingredient cards for removal');
+
+    } catch (error) {
+        console.error('Failed to load menu ingredients:', error);
+        ingredientsGrid.innerHTML = '<div class="col-12 text-center text-muted">Failed to load ingredients</div>';
+    }
+}
+
+// Load add-ons
+async function loadAddOns() {
+    const addOnsGrid = document.getElementById('addOnsGrid');
+    if (!addOnsGrid) return;
+
+    try {
+        // Get add-ons from the menu items with stock information
+        const addOnsWithStock = menuItems.filter(item => item.category === 'add-ons');
+        
+        if (!addOnsWithStock || addOnsWithStock.length === 0) {
+            addOnsGrid.innerHTML = '<div class="col-12 text-center text-muted">No add-ons available</div>';
+            return;
+        }
+
+        // Render add-on cards using Bootstrap with stock information
+        addOnsGrid.innerHTML = addOnsWithStock.map(addon => {
+            // Determine card styling based on stock status
+            let cardClass = "card h-100";
+            let stockBadge = "";
+            
+            if (!addon.canBeOrdered) {
+                cardClass += " border-danger";
+                stockBadge = '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Out</span>';
+            } else if (addon.hasLowStock) {
+                cardClass += " border-warning";
+                stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Low</span>';
+            } else {
+                cardClass += " border-success";
+            }
+            
+            // Get stock information for the add-on
+            let stockInfo = "";
+            if (addon.ingredientsWithStock && addon.ingredientsWithStock.length > 0) {
+                const totalStock = addon.ingredientsWithStock.reduce((min, ing) => 
+                    Math.min(min, ing.currentStock), Infinity
+                );
+                stockInfo = `<div class="text-primary fw-bold" style="font-size: 12px;">Stock: ${totalStock}</div>`;
+            }
+            
+            return `
+                <div class="col-6">
+                    <div class="${cardClass} position-relative" data-addon="${addon._id}" style="height: 70px;">
+                        ${stockBadge}
+                        <div class="card-body p-2 d-flex align-items-center">
+                            <div class="form-check d-flex align-items-center flex-grow-1">
+                                <input class="form-check-input me-3" type="checkbox" id="addon_${addon._id}" 
+                                       onchange="handleAddonSelection(this)">
+                                <div class="vr me-3" style="height: 30px; opacity: 0.3; border-color: #198754;"></div>
+                                <label class="form-check-label flex-grow-1" for="addon_${addon._id}">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">${addon.name}</div>
+                                        <small class="text-success fw-bold" style="font-size: 11px;">+₱${addon.price.toFixed(2)}</small>
+                                        ${stockInfo}
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Failed to load add-ons:', error);
+        addOnsGrid.innerHTML = '<div class="col-12 text-center text-muted">Failed to load add-ons</div>';
+    }
+}
+
+// Handle ingredient selection (for removal)
+function handleIngredientSelection(checkbox) {
+    const ingredientName = checkbox.id.replace('ingredient_', '');
+    const ingredientCard = checkbox.closest('.card');
+    
+    if (checkbox.checked) {
+        ingredientCard.classList.add('bg-danger', 'bg-opacity-10');
+        // Add to selectedAddons with action: 'remove'
+        selectedAddons.push({
+            id: ingredientName,
+            name: ingredientName,
+            price: 0, // No price for removed ingredients
+            action: 'remove'
+        });
+    } else {
+        ingredientCard.classList.remove('bg-danger', 'bg-opacity-10');
+        // Remove from selectedAddons
+        selectedAddons = selectedAddons.filter(item => 
+            !(item.name === ingredientName && item.action === 'remove')
+        );
+    }
+    
+    console.log('Current selected ingredients for removal:', selectedAddons.filter(item => item.action === 'remove'));
+    updateModalTotal();
+}
 
 // Update modal total
 function updateModalTotal() {
@@ -594,7 +903,10 @@ function updateModalTotal() {
 
     const basePrice = currentModalItem.price;
     const quantity = parseInt(document.getElementById('modalQuantity').value) || 1;
-    const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
+    // Only count add-ons (action: 'add'), not removed ingredients (action: 'remove')
+    const addonsTotal = selectedAddons
+        .filter(addon => addon.action === 'add' || !addon.action) // Include legacy add-ons without action
+        .reduce((sum, addon) => sum + addon.price, 0);
     const total = (basePrice + addonsTotal) * quantity;
 
     const totalElement = document.getElementById('modalTotalPrice');
@@ -603,9 +915,57 @@ function updateModalTotal() {
     }
 }
 
+// Get currently selected ingredients from modal
+function getSelectedIngredients() {
+    const selectedIngredients = [];
+    const ingredientCheckboxes = document.querySelectorAll('#ingredientsGrid input[type="checkbox"]:checked');
+    
+    ingredientCheckboxes.forEach(checkbox => {
+        const ingredientName = checkbox.getAttribute('data-ingredient');
+        const ingredientQuantity = parseFloat(checkbox.getAttribute('data-quantity')) || 1;
+        
+        if (ingredientName) {
+            selectedIngredients.push({
+                inventoryItem: ingredientName,
+                quantity: ingredientQuantity
+            });
+        }
+    });
+    
+    return selectedIngredients;
+}
+
 // Handle Add to Cart
 function handleAddToCart() {
     if (!currentModalItem) return;
+
+    // Check if there are any out-of-stock ingredients that haven't been removed
+    if (!currentModalItem.canBeOrdered) {
+        const outOfStockIngredients = currentModalItem.ingredientsWithStock.filter(ing => ing.isOutOfStock);
+        if (outOfStockIngredients.length > 0) {
+            // Check if any out-of-stock ingredients are still selected (not removed)
+            const selectedIngredients = getSelectedIngredients();
+            const stillSelectedOutOfStock = outOfStockIngredients.filter(ing => 
+                selectedIngredients.some(selected => selected.inventoryItem === ing.inventoryItem)
+            );
+            
+            if (stillSelectedOutOfStock.length > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Cannot Add to Cart',
+                    html: `
+                        <p>This item cannot be added because some ingredients are out of stock:</p>
+                        <ul class="text-start">
+                            ${stillSelectedOutOfStock.map(ing => `<li>${ing.inventoryItem} (Available: ${ing.currentStock})</li>`).join('')}
+                        </ul>
+                        <p class="mt-3">Please remove these ingredients to add the item to your cart.</p>
+                    `,
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+        }
+    }
 
     const quantity = parseInt(document.getElementById('modalQuantity').value) || 1;
 
@@ -646,7 +1006,7 @@ function updateCart() {
                         <h6 class="mb-1">${item.name}</h6>
                         <small class="text-muted">
                             Qty: ${item.quantity} × ₱${item.price.toFixed(2)}
-                            ${item.addons.length > 0 ? `<br>Add-ons: ${item.addons.map(a => a.name).join(', ')}` : ''}
+                            ${formatCartCustomizations(item.addons)}
                         </small>
                         </div>
                     <div class="text-end">
@@ -662,6 +1022,26 @@ function updateCart() {
 
     const total = cartItems.reduce((sum, item) => sum + item.total, 0);
     cartTotal.textContent = `₱${total.toFixed(2)}`;
+}
+
+// Format cart customizations to distinguish between added and removed items
+function formatCartCustomizations(addons) {
+    if (!addons || addons.length === 0) return '';
+    
+    const addedItems = addons.filter(item => item.action === 'add' || !item.action);
+    const removedItems = addons.filter(item => item.action === 'remove');
+    
+    let customizations = '';
+    
+    if (addedItems.length > 0) {
+        customizations += `<br><span class="text-success">Add: ${addedItems.map(a => a.name).join(', ')}</span>`;
+    }
+    
+    if (removedItems.length > 0) {
+        customizations += `<br><span class="text-danger">Remove: ${removedItems.map(r => r.name).join(', ')}</span>`;
+    }
+    
+    return customizations;
 }
 
 // Remove Cart Item
@@ -700,36 +1080,47 @@ function handleCheckout() {
 // Handle Payment Confirm
 async function handlePaymentConfirm() {
     try {
-        // Process each cart item as a separate sale
-        const orderPromises = cartItems.map(async (item) => {
-            const orderData = {
+        // Prepare all items for single order
+        const items = cartItems.map(item => {
+            // Separate actual add-ons from removed ingredients
+            const actualAddOns = item.addons.filter(addon => addon.action === 'add' || !addon.action);
+            const removedIngredients = item.addons.filter(addon => addon.action === 'remove');
+            
+            return {
                 menuItem: item.id,
                 quantity: item.quantity,
-                addOns: item.addons.map(addon => ({
+                addOns: actualAddOns.map(addon => ({
                     menuItem: addon.id, // This is now the actual ObjectId
                     quantity: 1
                 })),
-                paymentMethod: paymentMethod,
-                serviceType: orderType
+                removedIngredients: removedIngredients.map(ingredient => ({
+                    inventoryItem: ingredient.inventoryItem || ingredient.name,
+                    name: ingredient.name,
+                    quantity: 1
+                }))
             };
-
-            console.log('Sending individual order data:', orderData);
-            console.log('Add-ons being sent:', orderData.addOns);
-
-            return await apiRequest('/sales/new-sale', {
-                method: 'POST',
-                body: JSON.stringify(orderData)
-            });
         });
 
-        const responses = await Promise.all(orderPromises);
-        console.log('All order responses:', responses);
-        console.log('Successfully processed orders:', responses.length);
+        const orderData = {
+            items: items,
+            paymentMethod: paymentMethod,
+            serviceType: orderType
+        };
+
+        console.log('Sending multiple sales order data:', orderData);
+
+        const response = await apiRequest('/sales/new-multiple-sales', {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+
+        console.log('Order response:', response);
+        console.log('Successfully processed order with ID:', response.orderID);
 
         // Handle successful order
         Swal.fire({
             title: 'Order Completed!',
-            text: `Successfully processed ${responses.length} items!`,
+            text: `Successfully processed ${response.totalItems} items with Order ID: ${response.orderID}!`,
             icon: 'success',
             confirmButtonText: 'OK',
             confirmButtonColor: '#dc3545'
@@ -743,22 +1134,73 @@ async function handlePaymentConfirm() {
 
     } catch (error) {
         console.error('Error processing order:', error);
+        console.error('Error status:', error.status);
+        console.error('Error data:', error.data);
         
-        // Handle different types of errors
+        // Handle different types of errors with user-friendly messages
+        let errorTitle = 'Order Failed';
         let errorMessage = 'Failed to process order. Please try again.';
+        let errorDetails = '';
         
-        if (error.message && error.message.includes('401')) {
-            errorMessage = 'Authentication required. Please log in again.';
-        } else if (error.message && error.message.includes('400')) {
-            errorMessage = 'Invalid order data. Please check your cart.';
-        } else if (error.message && error.message.includes('500')) {
-            errorMessage = 'Server error. Please try again later.';
+        if (error.status === 401) {
+            errorTitle = 'Authentication Required';
+            errorMessage = 'Your session has expired. Please log in again.';
+        } else if (error.status === 400) {
+            errorTitle = 'Invalid Order';
+            
+            // Check if it's a stock-related error
+            if (error.data && error.data.message && error.data.message.includes('Some items failed to process')) {
+                errorMessage = 'Some items are out of stock:';
+                
+                // Parse the error details for stock issues
+                if (error.data.errors && Array.isArray(error.data.errors)) {
+                    const stockErrors = error.data.errors.filter(err => err.error && err.error.includes('Insufficient stock'));
+                    if (stockErrors.length > 0) {
+                        errorDetails = stockErrors.map(err => {
+                            // Extract ingredient name and stock info from error message
+                            const match = err.error.match(/Insufficient stock for (.+)\. Available: (\d+), Required: (\d+)/);
+                            if (match) {
+                                const [, ingredient, available, required] = match;
+                                return `• ${ingredient}: Need ${required}, but only ${available} available`;
+                            }
+                            return `• ${err.error}`;
+                        }).join('<br>');
+                    }
+                }
+            } else if (error.data && error.data.message && error.data.message.includes('Insufficient stock')) {
+                errorMessage = 'Some items are out of stock:';
+                
+                // Handle single error case
+                const match = error.data.message.match(/Insufficient stock for (.+)\. Available: (\d+), Required: (\d+)/);
+                if (match) {
+                    const [, ingredient, available, required] = match;
+                    errorDetails = `• ${ingredient}: Need ${required}, but only ${available} available`;
+                } else {
+                    errorDetails = `• ${error.data.message}`;
+                }
+            } else if (error.data && error.data.message) {
+                errorMessage = error.data.message;
+            } else {
+                errorMessage = 'Invalid order data. Please check your cart and try again.';
+            }
+        } else if (error.status === 500) {
+            errorTitle = 'Server Error';
+            errorMessage = 'Something went wrong on our end. Please try again later.';
+        } else if (error.message && error.message.includes('Failed to fetch')) {
+            errorTitle = 'Connection Error';
+            errorMessage = 'Unable to connect to the server. Please check your internet connection.';
         }
+
+        // Show error with details if available
+        const errorHtml = errorDetails ? 
+            `<p>${errorMessage}</p><div class="text-start"><strong>Details:</strong><br>${errorDetails}</div>` : 
+            errorMessage;
 
         Swal.fire({
             icon: 'error',
-            title: 'Order Failed',
-            text: errorMessage,
+            title: errorTitle,
+            html: errorHtml,
+            confirmButtonText: 'OK',
             confirmButtonColor: '#dc3545'
         });
     }

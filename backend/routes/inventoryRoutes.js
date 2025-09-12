@@ -8,6 +8,9 @@ router.use(authMiddleware, authMiddleware.isAdmin);
 
 // Get all inventory items
 router.get('/all', inventoryController.getAllInventory);
+// Low stock threshold settings
+router.get('/settings/low-stock-threshold', inventoryController.getLowStockThreshold);
+router.put('/settings/low-stock-threshold', inventoryController.setLowStockThreshold);
 // Get a single inventory item by ID
 router.get('/:id', inventoryController.getInventoryById);
 // Create a new inventory item

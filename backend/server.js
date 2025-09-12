@@ -18,6 +18,8 @@ const paymentMethodRoutes = require('./routes/paymentMethodRoutes');
 const deliveryAddressRoutes = require('./routes/deliveryAddressRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const kitchenRoutes = require('./routes/kitchenRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 
 const app = express();
@@ -60,6 +62,8 @@ app.use(mapper + 'payment-methods', paymentMethodRoutes);
 app.use(mapper + 'delivery-addresses', deliveryAddressRoutes);
 app.use(mapper + 'otp', otpRoutes);
 app.use(mapper + 'reviews', reviewRoutes);
+app.use(mapper + 'kitchen', kitchenRoutes);
+app.use(mapper + 'notifications', notificationRoutes);
 app.use('/uploads/menus', express.static(path.join(__dirname, 'uploads/menus')));
 
 // MongoDB connection with retry mechanism

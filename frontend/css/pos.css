@@ -823,3 +823,281 @@ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 #sidebarMenu .btn-close-white {
   filter: invert(1) grayscale(100%) brightness(0%);
 }
+
+/* Modern Collapsible Design - Compact */
+.collapse-header {
+  cursor: pointer;
+  padding: 6px 0;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.collapse-header:hover {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+}
+
+.collapse-chevron {
+  transition: transform 0.3s ease;
+}
+
+.collapse-header[aria-expanded="true"] .collapse-chevron {
+  transform: rotate(180deg);
+}
+
+/* Compact grid spacing for ingredients and add-ons */
+#ingredientsGrid,
+#addOnsGrid {
+  margin-top: 8px !important;
+}
+
+#ingredientsGrid .col-6,
+#addOnsGrid .col-6 {
+  margin-bottom: 8px;
+}
+
+/* Ingredient Cards - Small Design */
+.ingredient-card {
+  background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  height: 80px;
+}
+
+.ingredient-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+  border-color: #f87171;
+}
+
+.ingredient-card.selected {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.ingredient-card .card-body {
+  padding: 8px;
+  text-align: center;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ingredient-card .form-check {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ingredient-card .form-check-input {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+}
+
+.ingredient-card .form-check-input:checked {
+  background-color: #ef4444;
+  border-color: #ef4444;
+}
+
+.ingredient-card .form-check-input:checked::after {
+  content: "✓";
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ingredient-card .form-check-label {
+  cursor: pointer;
+  width: 100%;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ingredient-card .ingredient-icon {
+  font-size: 16px;
+  color: #ef4444;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.ingredient-card .ingredient-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.ingredient-card .ingredient-units {
+  font-size: 9px;
+  color: #6b7280;
+  line-height: 1;
+}
+
+/* Add-on Cards - Small Design */
+.addon-card-modern {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  height: 80px;
+}
+
+.addon-card-modern:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
+  border-color: #86efac;
+}
+
+.addon-card-modern.selected {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #22c55e;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+}
+
+.addon-card-modern .card-body {
+  padding: 8px;
+  text-align: center;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.addon-card-modern .form-check {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.addon-card-modern .form-check-input {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+}
+
+.addon-card-modern .form-check-input:checked {
+  background-color: #22c55e;
+  border-color: #22c55e;
+}
+
+.addon-card-modern .form-check-input:checked::after {
+  content: "✓";
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.addon-card-modern .form-check-label {
+  cursor: pointer;
+  width: 100%;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.addon-card-modern .addon-icon {
+  font-size: 16px;
+  color: #22c55e;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.addon-card-modern .addon-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.addon-card-modern .addon-price {
+  font-size: 9px;
+  color: #059669;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Stock Status Styles */
+.out-of-stock-card {
+  border-left: 4px solid #dc2626;
+}
+
+.out-of-stock-card:hover {
+  border-left-color: #b91c1c;
+}
+
+.low-stock-card {
+  border-left: 4px solid #f59e0b;
+}
+
+.low-stock-card:hover {
+  border-left-color: #d97706;
+}
+
+/* Modal Stock Status Styles */
+#modalStockStatus .alert {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+#modalStockStatus .alert i {
+  font-size: 0.75rem;
+}
+
+#modalStockStatus .text-danger,
+#modalStockStatus .text-warning {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Stock Badge Styles */
+.badge.position-absolute {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}

@@ -7,6 +7,18 @@ const itemsPerPage = 10;
 // API Configuration - using the config.js file
 // Make sure config.js is loaded before this script
 
+// Add test button for notifications (for development/testing)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  const testButton = document.createElement('button');
+  testButton.textContent = 'Test Notification';
+  testButton.className = 'btn btn-info btn-sm position-fixed';
+  testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+  testButton.onclick = function() {
+    showGlobalNotification('Test notification from Reports!', 'info');
+  };
+  document.body.appendChild(testButton);
+}
+
 // Improved response handler
 function handleResponse(response) {
   if (!response.ok) {
@@ -184,14 +196,35 @@ document.addEventListener('DOMContentLoaded', async function() {
       console.log('Processing sales data - first item:', salesData[0]);
       salesData.forEach(sale => {
         const items = [];
-        if (sale.menuItem && sale.menuItem.name) {
-          items.push(`${sale.menuItem.name} x${sale.quantity}`);
-        }
+        
+        // Handle main menu item
+        const mainItemName = sale.menuItem && sale.menuItem.name ? sale.menuItem.name : 
+                            sale.menuItemName || 'Unknown Item';
+        const mainItemPrice = sale.price || 0;
+        const mainItemTotal = mainItemPrice * sale.quantity;
+        items.push({
+          name: mainItemName,
+          quantity: sale.quantity,
+          price: mainItemPrice,
+          total: mainItemTotal,
+          type: 'main'
+        });
+        
+        // Handle add-ons
         if (Array.isArray(sale.addOns)) {
           sale.addOns.forEach(addOn => {
-            if (addOn.menuItem && addOn.menuItem.name) {
-              items.push(`${addOn.menuItem.name} x${addOn.quantity || 1}`);
-            }
+            const addOnName = addOn.menuItem && addOn.menuItem.name ? addOn.menuItem.name : 
+                             addOn.menuItemName || 'Unknown Add-on';
+            const addOnPrice = addOn.price || 0;
+            const addOnQuantity = addOn.quantity || 1;
+            const addOnTotal = addOnPrice * addOnQuantity;
+            items.push({
+              name: addOnName,
+              quantity: addOnQuantity,
+              price: addOnPrice,
+              total: addOnTotal,
+              type: 'addon'
+            });
           });
         }
 
@@ -209,7 +242,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         allTransactions.push({
           id: sale.orderID || sale._id,
           type: orderType,
-          items: items.join(', '),
+          items: items,
+          itemsString: items.map(item => `${item.name} x${item.quantity}`).join(', '),
           totalPrice: totalPrice,
           date: date,
           source: 'sales',
@@ -223,12 +257,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         const items = [];
         if (Array.isArray(order.items)) {
           order.items.forEach(item => {
+            // Main item
             if (item.menuItem && item.menuItem.name) {
-              items.push(`${item.menuItem.name} x${item.quantity}`);
+              const itemPrice = item.menuItem.price || 0;
+              const itemTotal = itemPrice * item.quantity;
+              items.push({
+                name: item.menuItem.name,
+                quantity: item.quantity,
+                price: itemPrice,
+                total: itemTotal,
+                type: 'main'
+              });
             }
+            // Add-ons
             if (Array.isArray(item.selectedAddOns)) {
               item.selectedAddOns.forEach(addOn => {
-                items.push(`${addOn.name} x1`);
+                const addOnPrice = addOn.price || 0;
+                items.push({
+                  name: addOn.name,
+                  quantity: 1,
+                  price: addOnPrice,
+                  total: addOnPrice,
+                  type: 'addon'
+                });
               });
             }
           });
@@ -248,7 +299,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         allTransactions.push({
           id: order.orderId || order._id,
           type: orderType,
-          items: items.join(', '),
+          items: items,
+          itemsString: items.map(item => `${item.name} x${item.quantity}`).join(', '),
           totalPrice: totalPrice,
           date: date,
           source: 'mobile',
@@ -516,7 +568,7 @@ function displayTransactionsWithPagination(transactions) {
       '<span class="badge bg-success me-1">POS</span>';
     
         // Count the number of items
-        const itemCount = transaction.items ? transaction.items.split(',').length : 0;
+        const itemCount = transaction.items ? transaction.items.length : 0;
     
         row.innerHTML = `
       <td>${sourceBadge}${transaction.id}</td>
@@ -525,7 +577,7 @@ function displayTransactionsWithPagination(transactions) {
       <td>₱${transaction.totalPrice.toFixed(2)}</td>
       <td>${transaction.date}</td>
       <td>
-        <button class="btn btn-sm btn-outline-primary" onclick="openTransactionDetailsModal('${transaction.id}', '${transaction.type}', '${transaction.items.replace(/'/g, "\\'")}', '₱${transaction.totalPrice.toFixed(2)}', '${transaction.date}', '${transaction.source}')">
+        <button class="btn btn-sm btn-outline-primary" onclick="openTransactionDetailsModal('${transaction.id}', '${transaction.type}', ${JSON.stringify(transaction.items).replace(/"/g, '&quot;')}, '₱${transaction.totalPrice.toFixed(2)}', '${transaction.date}', '${transaction.source}')">
               <i class="fas fa-eye"></i> View
             </button>
           </td>
@@ -667,47 +719,29 @@ function openTransactionDetailsModal(id, type, items, totalPrice, date, source) 
   document.getElementById("modalDate").textContent = date;
   document.getElementById("modalSource").textContent = source === 'mobile' ? 'Mobile Order' : 'POS Sale';
 
-  // Parse and categorize items
-  const categorizedItems = categorizeItems(items);
-  displayCategorizedItems(categorizedItems);
+  // Categorize items with price information
+  const categorizedItems = categorizeItemsWithPrices(items);
+  displayCategorizedItemsWithPrices(categorizedItems);
 
   // Show the modal
   const salesDetailsModal = new bootstrap.Modal(document.getElementById("salesDetailsModal"));
   salesDetailsModal.show();
 }
 
-// Function to categorize items based on their names
-function categorizeItems(itemsString) {
-  const items = itemsString.split(', ').filter(item => item.trim() !== '');
+// Function to categorize items with price information
+function categorizeItemsWithPrices(items) {
   const categories = {
-    'Ramen': [],
-    'Rice Bowls': [],
-    'Sides': [],
-    'Beverages': [],
+    'Main Items': [],
     'Add-ons': []
   };
 
-  items.forEach(item => {
-    const itemName = item.toLowerCase();
-    let categorized = false;
-
-    // Categorize based on item names
-    if (itemName.includes('ramen') || itemName.includes('tonkotsu') || itemName.includes('miso') || itemName.includes('shoyu')) {
-      categories['Ramen'].push(item);
-      categorized = true;
-    } else if (itemName.includes('bowl') || itemName.includes('teriyaki') || itemName.includes('rice')) {
-      categories['Rice Bowls'].push(item);
-      categorized = true;
-    } else if (itemName.includes('side') || itemName.includes('gyoza') || itemName.includes('tempura') || itemName.includes('salad')) {
-      categories['Sides'].push(item);
-      categorized = true;
-    } else if (itemName.includes('coke') || itemName.includes('drink') || itemName.includes('tea') || itemName.includes('coffee') || itemName.includes('water')) {
-      categories['Beverages'].push(item);
-      categorized = true;
+  items.forEach((item, index) => {
+    // First item is always the main menu item
+    if (index === 0) {
+      categories['Main Items'].push(item);
     } else {
-      // If no specific category matches, put in Add-ons
+      // All other items are add-ons
       categories['Add-ons'].push(item);
-      categorized = true;
     }
   });
 
@@ -721,7 +755,91 @@ function categorizeItems(itemsString) {
   return categories;
 }
 
-// Function to display categorized items in the modal
+// Function to categorize items based on their names (legacy)
+function categorizeItems(itemsString) {
+  const items = itemsString.split(', ').filter(item => item.trim() !== '');
+  const categories = {
+    'Main Items': [],
+    'Add-ons': []
+  };
+
+  items.forEach((item, index) => {
+    const itemName = item.toLowerCase();
+    
+    // First item is always the main menu item
+    if (index === 0) {
+      categories['Main Items'].push(item);
+    } else {
+      // All other items are add-ons
+      categories['Add-ons'].push(item);
+    }
+  });
+
+  // Remove empty categories
+  Object.keys(categories).forEach(category => {
+    if (categories[category].length === 0) {
+      delete categories[category];
+    }
+  });
+
+  return categories;
+}
+
+// Function to display categorized items with prices in the modal
+function displayCategorizedItemsWithPrices(categorizedItems) {
+  const modalItemsDiv = document.getElementById("modalItems");
+  
+  if (Object.keys(categorizedItems).length === 0) {
+    modalItemsDiv.innerHTML = '<div class="text-muted">No items found</div>';
+    return;
+  }
+
+  let html = '';
+  
+  // Define the order of categories to display
+  const categoryOrder = ['Main Items', 'Add-ons'];
+  
+  categoryOrder.forEach(category => {
+    if (categorizedItems[category] && categorizedItems[category].length > 0) {
+      const iconClass = category === 'Main Items' ? 'fas fa-utensils' : 'fas fa-plus';
+      const iconColor = category === 'Main Items' ? 'text-primary' : 'text-success';
+      
+      html += `
+        <div class="mb-3">
+          <h6 class="fw-semibold text-dark mb-2">
+            <i class="${iconClass} me-1 ${iconColor}"></i>${category}
+          </h6>
+          <ul class="list-unstyled mb-0">
+      `;
+      
+      categorizedItems[category].forEach(item => {
+        const itemDisplay = `${item.name} x${item.quantity}`;
+        const priceDisplay = `₱${item.total.toFixed(2)}`;
+        
+        html += `
+          <li class="mb-2 d-flex justify-content-between align-items-center">
+            <div>
+              <i class="fas fa-circle me-2" style="font-size: 0.5rem; color: #6c757d;"></i>
+              <span class="text-dark">${itemDisplay}</span>
+            </div>
+            <div class="text-end">
+              <small class="text-muted">${priceDisplay}</small>
+            </div>
+          </li>
+        `;
+      });
+      
+      html += `
+          </ul>
+        </div>
+      `;
+    }
+  });
+
+  modalItemsDiv.innerHTML = html;
+}
+
+// Function to display categorized items in the modal (legacy)
 function displayCategorizedItems(categorizedItems) {
   const modalItemsDiv = document.getElementById("modalItems");
   
@@ -731,28 +849,37 @@ function displayCategorizedItems(categorizedItems) {
   }
 
   let html = '';
-  Object.keys(categorizedItems).forEach(category => {
-    html += `
-      <div class="mb-3">
-        <h6 class="fw-semibold text-dark mb-2">
-          <i class="fas fa-utensils me-1 text-primary"></i>${category}
-        </h6>
-        <ul class="list-unstyled mb-0">
-    `;
-    
-    categorizedItems[category].forEach(item => {
+  
+  // Define the order of categories to display
+  const categoryOrder = ['Main Items', 'Add-ons'];
+  
+  categoryOrder.forEach(category => {
+    if (categorizedItems[category] && categorizedItems[category].length > 0) {
+      const iconClass = category === 'Main Items' ? 'fas fa-utensils' : 'fas fa-plus';
+      const iconColor = category === 'Main Items' ? 'text-primary' : 'text-success';
+      
       html += `
-        <li class="mb-1">
-          <i class="fas fa-circle me-2" style="font-size: 0.5rem; color: #6c757d;"></i>
-          <span class="text-dark">${item}</span>
-        </li>
+        <div class="mb-3">
+          <h6 class="fw-semibold text-dark mb-2">
+            <i class="${iconClass} me-1 ${iconColor}"></i>${category}
+          </h6>
+          <ul class="list-unstyled mb-0">
       `;
-    });
-    
-    html += `
-        </ul>
-      </div>
-    `;
+      
+      categorizedItems[category].forEach(item => {
+        html += `
+          <li class="mb-1">
+            <i class="fas fa-circle me-2" style="font-size: 0.5rem; color: #6c757d;"></i>
+            <span class="text-dark">${item}</span>
+          </li>
+        `;
+      });
+      
+      html += `
+          </ul>
+        </div>
+      `;
+    }
   });
 
   modalItemsDiv.innerHTML = html;
@@ -769,7 +896,7 @@ function filterTransactions() {
   filteredTransactions = allTransactions.filter(transaction => {
     const id = transaction.id.toLowerCase();
     const type = transaction.type.toLowerCase();
-    const items = transaction.items.toLowerCase();
+    const items = transaction.itemsString.toLowerCase();
     const date = transaction.date;
     
     const matchesSearch = id.includes(searchTerm) || type.includes(searchTerm) || items.includes(searchTerm);
@@ -852,7 +979,7 @@ function generateCSV(transactions) {
     transaction.id,
     transaction.source === 'mobile' ? 'Mobile Order' : 'POS Sale',
     transaction.type,
-    transaction.items,
+    transaction.itemsString || (transaction.items ? transaction.items.map(item => `${item.name} x${item.quantity}`).join(', ') : 'No items'),
     transaction.totalPrice.toFixed(2),
     transaction.date
   ]);

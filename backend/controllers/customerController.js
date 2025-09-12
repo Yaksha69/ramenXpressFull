@@ -3,6 +3,80 @@ const { validatePassword, hashPassword, comparePassword, generateCustomerToken }
 const googleAuthService = require('../services/googleAuthService');
 const emailOTPService = require('../services/emailOTPService');
 
+// Get customer count with period filtering
+exports.getCustomerCount = async (req, res) => {
+    try {
+        const { period = 'week' } = req.query;
+        
+        let dateFilter = {};
+        
+        // Apply date filter based on period
+        if (period === 'week') {
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6); // End of current week (Saturday)
+            endOfWeek.setHours(23, 59, 59, 999);
+            
+            dateFilter = {
+                createdAt: {
+                    $gte: startOfWeek,
+                    $lte: endOfWeek
+                }
+            };
+        } else if (period === 'month') {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            
+            dateFilter = {
+                createdAt: {
+                    $gte: startOfMonth,
+                    $lte: endOfMonth
+                }
+            };
+        } else if (period === 'today') {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            
+            dateFilter = {
+                createdAt: {
+                    $gte: startOfDay,
+                    $lte: endOfDay
+                }
+            };
+        }
+        
+        const newCustomers = await Customer.find(dateFilter);
+        const totalNewCustomers = newCustomers.length;
+        
+        // Get total customers count
+        const totalCustomers = await Customer.countDocuments();
+        
+        res.json({
+            newCustomers,
+            totalNewCustomers,
+            totalCustomers,
+            period,
+            summary: {
+                totalNewCustomers,
+                totalCustomers,
+                message: `${totalNewCustomers} new customers registered this ${period}`,
+                dateRange: dateFilter.createdAt ? {
+                    from: dateFilter.createdAt.$gte,
+                    to: dateFilter.createdAt.$lte
+                } : null
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Initial registration (Step 1) - Create account and send OTP
 exports.registerWithEmail = async (req, res) => {
   try {
