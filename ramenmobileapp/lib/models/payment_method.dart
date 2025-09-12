@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 enum PaymentType {
+  cash,
   gcash,
   maya,
 }
@@ -16,28 +17,40 @@ class PaymentMethod {
     required this.id,
     required this.type,
     required this.title,
-    required this.accountNumber,
+    this.accountNumber = '',
     this.isDefault = false,
   });
 
   String get displayName {
-    String lastDigits = accountNumber.length >= 4
-        ? accountNumber.substring(accountNumber.length - 4)
-        : accountNumber;
     switch (type) {
+      case PaymentType.cash:
+        return 'Cash on Delivery';
       case PaymentType.gcash:
-        return 'GCash •••• $lastDigits';
+        return 'GCash';
       case PaymentType.maya:
-        return 'Maya •••• $lastDigits';
+        return 'Maya';
     }
   }
 
   IconData get icon {
     switch (type) {
+      case PaymentType.cash:
+        return Icons.payments;
       case PaymentType.gcash:
         return Icons.account_balance_wallet;
       case PaymentType.maya:
-        return Icons.account_balance;
+        return Icons.credit_card;
+    }
+  }
+
+  String? get logoAsset {
+    switch (type) {
+      case PaymentType.cash:
+        return null;
+      case PaymentType.gcash:
+        return 'assets/gcash_logo.png';
+      case PaymentType.maya:
+        return 'assets/paymaya_logo.png';
     }
   }
 
@@ -56,7 +69,7 @@ class PaymentMethod {
       id: json['id'],
       type: PaymentType.values.firstWhere(
         (e) => e.name.toLowerCase() == (json['type']?.toString().toLowerCase() ?? ''),
-        orElse: () => PaymentType.gcash,
+        orElse: () => PaymentType.cash,
       ),
       title: json['title'],
       accountNumber: json['accountNumber'] ?? json['mobileNumber'] ?? '',

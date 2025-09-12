@@ -254,10 +254,60 @@ exports.updateOrderStatus = async (req, res) => {
 // Get mobile order by ID
 exports.getMobileOrderById = async (req, res) => {
   try {
-    const order = await MobileOrder.findById(req.params.id);
+    const order = await MobileOrder.findById(req.params.id).populate('customerId', 'firstName lastName name fullName phone');
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    res.json(order);
+    
+    // Return the order wrapped in a data object for consistency
+    res.json({ data: order });
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Cancel a mobile order
+exports.cancelMobileOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the order
+    const order = await MobileOrder.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    // Check if order can be cancelled (only pending orders can be cancelled)
+    if (order.status !== 'pending') {
+      return res.status(400).json({ 
+        message: 'Order cannot be cancelled. Only pending orders can be cancelled.' 
+      });
+    }
+    
+    // Update order status to cancelled
+    const updatedOrder = await MobileOrder.findByIdAndUpdate(
+      id,
+      { status: 'cancelled' },
+      { new: true }
+    ).populate('customerId', 'firstName lastName name fullName phone');
+    
+    // Emit socket.io event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('orderStatusUpdate', {
+        orderId: updatedOrder._id,
+        status: updatedOrder.status,
+        customerId: updatedOrder.customerId?._id,
+        order: updatedOrder
+      });
+    }
+    
+    console.log(`🚫 Order ${order.orderId} has been cancelled`);
+    res.json({ 
+      success: true, 
+      message: 'Order cancelled successfully',
+      order: updatedOrder 
+    });
+  } catch (err) {
+    console.error('❌ Error cancelling order:', err);
     res.status(500).json({ message: err.message });
   }
 };

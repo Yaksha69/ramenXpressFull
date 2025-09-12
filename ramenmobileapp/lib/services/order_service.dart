@@ -21,11 +21,12 @@ class OrderService {
 
   List<Order> get orders => List.unmodifiable(_orders);
 
-  Future<void> loadOrders() async {
+  Future<void> loadOrders({bool forceRefresh = false}) async {
     try {
-      // Try to load from API first using customer-specific endpoint
+      // Always try to load from API first for fresh data
+      print('🔄 Loading orders from API (forceRefresh: $forceRefresh)');
       final apiOrders = await _apiService.getCustomerOrders();
-      print('🟢 Orders received from API: ${apiOrders.length} ${apiOrders}');
+      print('🟢 Orders received from API: ${apiOrders.length}');
       for (var order in apiOrders) {
         print('Order details: ${order.toJson()}');
       }
@@ -35,17 +36,22 @@ class OrderService {
       print('🔴 Error loading orders from API: ${e}');
       developer.log('Error loading orders from API: ${e}', name: 'OrderService');
       
-      // Fallback to local storage
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ordersJson = prefs.getString(_ordersKey);
-      if (ordersJson != null) {
-        final List<dynamic> ordersList = json.decode(ordersJson);
-        _orders = ordersList.map((order) => Order.fromJson(order)).toList();
-      }
-    } catch (e) {
-        developer.log('Error loading orders from local storage: ${e}', name: 'OrderService');
-      _orders = [];
+      // Only fallback to local storage if not forcing refresh
+      if (!forceRefresh) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final ordersJson = prefs.getString(_ordersKey);
+          if (ordersJson != null) {
+            final List<dynamic> ordersList = json.decode(ordersJson);
+            _orders = ordersList.map((order) => Order.fromJson(order)).toList();
+            print('📱 Loaded ${_orders.length} orders from local storage');
+          }
+        } catch (e) {
+          developer.log('Error loading orders from local storage: ${e}', name: 'OrderService');
+          _orders = [];
+        }
+      } else {
+        _orders = [];
       }
     }
   }

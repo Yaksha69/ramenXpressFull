@@ -395,11 +395,27 @@ class ApiService {
     try {
       final response = await _dio.get('/mobile-orders/$id');
       if (response.statusCode == 200) {
-        return Order.fromJson(response.data);
+        return Order.fromJson(response.data['data']);
+      } else {
+        throw Exception('Failed to get order: ${response.statusMessage}');
       }
-      throw Exception('Failed to fetch order');
-    } on DioException catch (e) {
-      throw _handleDioError(e);
+    } catch (e) {
+      print('❌ Error getting order by ID: $e');
+      throw Exception('Failed to get order: $e');
+    }
+  }
+
+  Future<bool> cancelOrder(String orderId) async {
+    try {
+      final response = await _dio.patch('/mobile-orders/$orderId/cancel');
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception('Failed to cancel order: ${response.statusMessage}');
+      }
+    } catch (e) {
+      print('❌ Error canceling order: $e');
+      throw Exception('Failed to cancel order: $e');
     }
   }
 
@@ -631,6 +647,35 @@ class ApiService {
     // Backend stores only filenames like "1752799756016-997715280-ramenbg.jpg"
     final serverBaseUrl = baseUrl.replaceAll('/api/v1', '');
     return '$serverBaseUrl/uploads/menus/$imagePath';
+  }
+
+  // Submit review for an order
+  Future<void> submitReview(String orderId, int rating, String comment) async {
+    try {
+      final token = await loadToken();
+      if (token == null) {
+        throw Exception('Authentication required');
+      }
+      
+      final response = await _dio.post(
+        '/api/v1/reviews',
+        data: {
+          'orderId': orderId,
+          'rating': rating,
+          'comment': comment,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to submit review');
+      }
+    } catch (e) {
+      print('Error submitting review: $e');
+      throw Exception('Failed to submit review: $e');
+    }
   }
 
   static bool isNetworkImage(String imagePath) {

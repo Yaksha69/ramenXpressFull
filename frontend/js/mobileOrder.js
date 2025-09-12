@@ -228,13 +228,14 @@ function displayOrders(orders) {
         const row = document.createElement("tr");
         const customerName = getCustomerDisplayName(order);
         const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
+        row.setAttribute('data-order-id', order._id);
         row.innerHTML = `
             <td>#${order.orderId || order._id}</td>
             <td>${customerName}</td>
             <td>${orderDate}</td>
             <td>₱${order.total ? order.total.toFixed(2) : "0.00"}</td>
             <td>${paymentBadge}</td>
-            <td>${statusBadge}</td>
+            <td class="status-cell">${statusBadge}</td>
             <td>
                 <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
                 <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
@@ -243,6 +244,46 @@ function displayOrders(orders) {
         tbody.appendChild(row);
     });
 
+    // If there are delivered orders, add a separator row
+    if (statusFilter === 'all' && delivered.length > 0) {
+        const sepRow = document.createElement("tr");
+        sepRow.innerHTML = `<td colspan="7" class="text-center text-success fw-bold bg-light">Delivered Orders</td>`;
+        tbody.appendChild(sepRow);
+    }
+
+    // Show delivered orders below
+    if (statusFilter === 'all') {
+        delivered.forEach(order => {
+            const orderDate = new Date(order.createdAt).toLocaleString();
+            const statusBadge = getStatusBadge(order.status);
+            let paymentStatus = order.paymentStatus;
+            if (!paymentStatus) {
+                if (order.paymentMethod && order.paymentMethod.toLowerCase() !== 'cash on delivery') {
+                    paymentStatus = 'paid';
+                } else {
+                    paymentStatus = 'pending';
+                }
+            }
+            const paymentBadge = getPaymentBadge(paymentStatus);
+            const row = document.createElement("tr");
+            const customerName = getCustomerDisplayName(order);
+            const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
+            row.setAttribute('data-order-id', order._id);
+            row.innerHTML = `
+                <td>#${order.orderId || order._id}</td>
+                <td>${customerName}</td>
+                <td>${orderDate}</td>
+                <td>₱${order.total ? order.total.toFixed(2) : "0.00"}</td>
+                <td>${paymentBadge}</td>
+                <td class="status-cell">${statusBadge}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
+                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
     // Render pagination
     renderPagination(totalOrders, currentPage);
 }
@@ -586,7 +627,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ status: newStatus })
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            // Instead of merging partial response, reload all orders to preserve customer info
+            
+            // Force reload the orders table to show updated status
             await loadMobileOrders();
             showSuccessModal(`Order status updated to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1).replace('-', ' ')}!`, newStatus);
             // Hide modal

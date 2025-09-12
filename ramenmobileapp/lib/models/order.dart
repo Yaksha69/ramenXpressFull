@@ -4,6 +4,7 @@ enum OrderStatus {
   pending,
   preparing,
   ready,
+  outForDelivery,
   delivered,
   cancelled,
 }
@@ -69,10 +70,7 @@ class Order {
       id: json['_id'] ?? json['id'] ?? '',
       items: (json['items'] as List).map((item) => CartItem.fromJson(item)).toList(),
       total: (json['total'] ?? 0).toDouble(),
-      status: OrderStatus.values.firstWhere(
-        (e) => e.name == (json['status'] ?? 'pending'),
-        orElse: () => OrderStatus.pending,
-      ),
+      status: _parseOrderStatus(json['status'] ?? 'pending'),
       orderDate: DateTime.parse(json['orderDate'] ?? json['createdAt']),
       deliveryMethod: deliveryMethod,
       deliveryAddress: deliveryAddress,
@@ -106,5 +104,27 @@ class Order {
       notes: notes ?? this.notes,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
     );
+  }
+
+  static OrderStatus _parseOrderStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return OrderStatus.pending;
+      case 'preparing':
+      case 'processing':
+        return OrderStatus.preparing;
+      case 'ready':
+        return OrderStatus.ready;
+      case 'out for delivery':
+      case 'outfordelivery':
+      case 'on the way':
+        return OrderStatus.outForDelivery;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      default:
+        return OrderStatus.pending;
+    }
   }
 } 

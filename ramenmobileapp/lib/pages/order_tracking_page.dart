@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/delivery_animation.dart';
 import '../models/order.dart';
@@ -31,6 +32,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     } else {
       _isLoading = false;
     }
+    
+    // Set up periodic refresh to get latest order status
+    _startPeriodicRefresh();
+  }
+  
+  void _startPeriodicRefresh() {
+    Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted) {
+        _loadOrderDetails();
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _loadOrderDetails() async {
@@ -41,16 +55,91 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       });
 
       final order = await ApiService().getMobileOrderById(widget.orderId);
+      print('🔍 Loaded order status: ${order.status.name}');
+      print('🔍 Order delivery method: ${order.deliveryMethod}');
       
       setState(() {
         _order = order;
         _isLoading = false;
       });
     } catch (e) {
+      print('❌ Error loading order: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  bool _canCancelOrder() {
+    if (_order == null) return false;
+    
+    // Only allow cancellation for pending orders (not preparing, ready, out for delivery, or delivered)
+    final status = _order!.status.name.toLowerCase();
+    print('🔍 Order status: $status, Can cancel: ${status == 'pending'}');
+    return status == 'pending';
+  }
+
+  Future<void> _cancelOrder() async {
+    // Show confirmation dialog
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep Order'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      await ApiService().cancelOrder(widget.orderId);
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order cancelled successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Refresh order details
+      await _loadOrderDetails();
+      
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to cancel order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -65,6 +154,19 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          // Always show cancel button for testing - will be conditional later
+          TextButton(
+            onPressed: _order != null && _canCancelOrder() ? _cancelOrder : null,
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: _order != null && _canCancelOrder() ? Colors.red : Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -126,6 +228,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
             DeliveryStatusWidget(
               orderStatus: _order!.status.name,
               lottieAnimationPath: 'assets/animations/delivery_guy.json',
+              deliveryMethod: _order!.deliveryMethod,
               orderDetails: {
                 'orderId': _order!.id,
                 'estimatedTime': _getEstimatedTime(),
@@ -156,13 +259,29 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   Widget _buildOrderTimeline() {
+    final isPickup = _order!.deliveryMethod.toLowerCase() == 'pickup';
+    final currentStatus = _order!.status.name.toLowerCase();
+    print('🔍 Building timeline - Delivery method: ${_order!.deliveryMethod}, isPickup: $isPickup');
+    print('🔍 Current order status: $currentStatus');
+    
+    // Force delivery timeline if status is outfordelivery
+    final forceDeliveryTimeline = currentStatus == 'outfordelivery' || currentStatus == 'out for delivery';
+    final showDeliverySteps = !isPickup || forceDeliveryTimeline;
+    
     final steps = [
       {'title': 'Order Placed', 'status': 'completed'},
       {'title': 'Preparing', 'status': _getStepStatus('preparing')},
-      {'title': 'Ready for Pickup', 'status': _getStepStatus('ready')},
-      {'title': 'Out for Delivery', 'status': _getStepStatus('out for delivery')},
-      {'title': 'Delivered', 'status': _getStepStatus('delivered')},
+      if (!showDeliverySteps) ..[
+        {'title': 'Ready for Pickup', 'status': _getStepStatus('ready')},
+      ] else ..[
+        {'title': 'Ready', 'status': _getStepStatus('ready')},
+        {'title': 'Out for Delivery', 'status': _getStepStatus('out for delivery')},
+        {'title': 'Delivered', 'status': _getStepStatus('delivered')},
+      ],
     ];
+    
+    print('🔍 Show delivery steps: $showDeliverySteps');
+    print('🔍 Timeline steps: ${steps.map((s) => s['title'] as String).toList()}');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -363,11 +482,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
           ),
           const SizedBox(height: 16),
           _buildSummaryRow('Subtotal', '₱${_order!.total ?? 0}'),
-          _buildSummaryRow('Delivery Fee', '₱50'),
+          if (_order!.deliveryMethod.toLowerCase() != 'pickup')
+            _buildSummaryRow('Delivery Fee', '₱50'),
           const Divider(),
           _buildSummaryRow(
             'Total',
-            '₱${(_order!.total ?? 0) + 50}',
+            '₱${(_order!.total ?? 0) + (_order!.deliveryMethod.toLowerCase() != 'pickup' ? 50 : 0)}',
             isTotal: true,
           ),
           const SizedBox(height: 16),
@@ -414,6 +534,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
 
   String _getStepStatus(String stepName) {
     final currentStatus = _order!.status.name.toLowerCase();
+    print('🔍 Checking step: $stepName, current status: $currentStatus');
     
     switch (stepName.toLowerCase()) {
       case 'preparing':
@@ -423,8 +544,10 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         return currentStatus == 'ready' ? 'current' : 
                _isStatusAfter(currentStatus, 'ready') ? 'completed' : 'pending';
       case 'out for delivery':
-        return currentStatus == 'out for delivery' || currentStatus == 'on the way' ? 'current' : 
-               _isStatusAfter(currentStatus, 'out for delivery') ? 'completed' : 'pending';
+        final isOutForDelivery = currentStatus == 'outfordelivery' || currentStatus == 'out for delivery' || currentStatus == 'on the way';
+        print('🔍 Out for delivery check: $isOutForDelivery');
+        return isOutForDelivery ? 'current' : 
+               _isStatusAfter(currentStatus, 'outfordelivery') ? 'completed' : 'pending';
       case 'delivered':
         return currentStatus == 'delivered' ? 'completed' : 'pending';
       default:
@@ -433,9 +556,20 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   bool _isStatusAfter(String currentStatus, String checkStatus) {
-    const statusOrder = ['preparing', 'ready', 'out for delivery', 'delivered'];
-    final currentIndex = statusOrder.indexOf(currentStatus);
-    final checkIndex = statusOrder.indexOf(checkStatus);
+    const statusOrder = ['preparing', 'ready', 'outfordelivery', 'delivered'];
+    
+    // Handle different status formats
+    String normalizedCurrent = currentStatus;
+    String normalizedCheck = checkStatus;
+    
+    if (currentStatus == 'out for delivery') normalizedCurrent = 'outfordelivery';
+    if (checkStatus == 'out for delivery') normalizedCheck = 'outfordelivery';
+    
+    final currentIndex = statusOrder.indexOf(normalizedCurrent);
+    final checkIndex = statusOrder.indexOf(normalizedCheck);
+    
+    print('🔍 Status comparison - Current: $normalizedCurrent (index: $currentIndex), Check: $normalizedCheck (index: $checkIndex)');
+    
     return currentIndex > checkIndex;
   }
 
@@ -446,6 +580,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         return '15-20 minutes';
       case 'ready':
         return '5-10 minutes';
+      case 'outfordelivery':
       case 'out for delivery':
       case 'on the way':
         return '10-15 minutes';
