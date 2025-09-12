@@ -18,6 +18,29 @@ if (!user.role || user.role !== 'admin') {
   window.location.href = 'pos.html';
 }
 
+// Add test button for notifications (for development/testing)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // Test notification button
+  const testButton = document.createElement('button');
+  testButton.textContent = 'Test Notification';
+  testButton.className = 'btn btn-primary btn-sm position-fixed';
+  testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+  testButton.onclick = function() {
+    showGlobalNotification('Test notification from Dashboard!', 'success');
+  };
+  document.body.appendChild(testButton);
+  
+  // Test inventory notification button
+  const testInventoryButton = document.createElement('button');
+  testInventoryButton.textContent = 'Test Inventory';
+  testInventoryButton.className = 'btn btn-warning btn-sm position-fixed';
+  testInventoryButton.style.cssText = 'bottom: 60px; right: 20px; z-index: 9999;';
+  testInventoryButton.onclick = function() {
+    testInventoryNotification();
+  };
+  document.body.appendChild(testInventoryButton);
+}
+
 // Feedback filtering functionality
 function filterFeedback(type) {
   // Remove active class from all buttons

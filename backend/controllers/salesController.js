@@ -2,6 +2,19 @@ const Sales = require('../models/sales');
 const Menu = require('../models/menu');
 const Inventory = require('../models/inventory');
 const Counter = require('../models/counter');
+const Settings = require('../models/settings');
+const notificationController = require('./notificationController');
+
+// Get low stock threshold from settings
+const getLowStockThreshold = async () => {
+    try {
+        const settings = await Settings.findOne({ key: 'lowStockThreshold' });
+        return settings ? settings.value : 10; // Default threshold
+    } catch (error) {
+        console.error('Error getting low stock threshold:', error);
+        return 10; // Default threshold
+    }
+};
 
 // Generate simple sequential order ID - always check database for highest existing ID
 const generateOrderID = async () => {
@@ -75,8 +88,12 @@ const resetCounter = async () => {
 };
 
 // Deduct ingredients from inventory
-const deductIngredients = async (menuItem, quantity, addOns, removedIngredients = []) => {
+const deductIngredients = async (menuItem, quantity, addOns, removedIngredients = [], req = null) => {
     try {
+        // Get low stock threshold
+        const threshold = await getLowStockThreshold();
+        const lowStockNotifications = [];
+        
         // Create a map of removed ingredients for quick lookup
         const removedMap = {};
         removedIngredients.forEach(removed => {
@@ -94,9 +111,27 @@ const deductIngredients = async (menuItem, quantity, addOns, removedIngredients 
                 
                 if (requiredQuantity > 0) {
                     if (inventoryItem.stocks >= requiredQuantity) {
+                        const oldStocks = inventoryItem.stocks;
                         inventoryItem.stocks -= requiredQuantity;
                         await inventoryItem.save();
                         console.log(`Deducted ${requiredQuantity} ${ingredient.inventoryItem} (${ingredient.quantity} - ${removedQuantity} removed) × ${quantity}`);
+                        
+                        // Check if this deduction caused low stock or out of stock
+                        if (inventoryItem.stocks <= 0) {
+                            lowStockNotifications.push({
+                                item: inventoryItem,
+                                type: 'out_of_stock',
+                                oldStocks: oldStocks,
+                                newStocks: inventoryItem.stocks
+                            });
+                        } else if (inventoryItem.stocks <= threshold) {
+                            lowStockNotifications.push({
+                                item: inventoryItem,
+                                type: 'low_stock',
+                                oldStocks: oldStocks,
+                                newStocks: inventoryItem.stocks
+                            });
+                        }
                     } else {
                         throw new Error(`Insufficient stock for ${ingredient.inventoryItem}. Available: ${inventoryItem.stocks}, Required: ${requiredQuantity}`);
                     }
@@ -117,8 +152,26 @@ const deductIngredients = async (menuItem, quantity, addOns, removedIngredients 
                     if (inventoryItem) {
                         const requiredQuantity = ingredient.quantity * addOn.quantity;
                         if (inventoryItem.stocks >= requiredQuantity) {
+                            const oldStocks = inventoryItem.stocks;
                             inventoryItem.stocks -= requiredQuantity;
                             await inventoryItem.save();
+                            
+                            // Check if this deduction caused low stock or out of stock
+                            if (inventoryItem.stocks <= 0) {
+                                lowStockNotifications.push({
+                                    item: inventoryItem,
+                                    type: 'out_of_stock',
+                                    oldStocks: oldStocks,
+                                    newStocks: inventoryItem.stocks
+                                });
+                            } else if (inventoryItem.stocks <= threshold) {
+                                lowStockNotifications.push({
+                                    item: inventoryItem,
+                                    type: 'low_stock',
+                                    oldStocks: oldStocks,
+                                    newStocks: inventoryItem.stocks
+                                });
+                            }
                         } else {
                             throw new Error(`Insufficient stock for ${ingredient.inventoryItem}. Available: ${inventoryItem.stocks}, Required: ${requiredQuantity}`);
                         }
@@ -128,6 +181,51 @@ const deductIngredients = async (menuItem, quantity, addOns, removedIngredients 
                 }
             }
         }
+        
+        // Create notifications for low stock items
+        if (lowStockNotifications.length > 0 && req) {
+            try {
+                for (const notification of lowStockNotifications) {
+                    let notificationData = null;
+                    
+                    if (notification.type === 'out_of_stock') {
+                        notificationData = await notificationController.createNotification({
+                            type: 'warning',
+                            title: `⚠️ Out of Stock Alert`,
+                            message: `${notification.item.name} is now out of stock after order processing`,
+                            targetRoles: ['admin', 'cashier'],
+                            priority: 'high'
+                        });
+                    } else if (notification.type === 'low_stock') {
+                        notificationData = await notificationController.createNotification({
+                            type: 'warning',
+                            title: `📉 Low Stock Alert`,
+                            message: `${notification.item.name} is running low (${notification.newStocks} remaining) after order processing`,
+                            targetRoles: ['admin', 'cashier'],
+                            priority: 'medium'
+                        });
+                    }
+                    
+                    // Emit real-time notification
+                    if (notificationData) {
+                        const io = req.app.get('io');
+                        if (io) {
+                            io.emit('inventoryUpdate', {
+                                itemId: notification.item._id,
+                                itemName: notification.item.name,
+                                stocks: notification.newStocks,
+                                status: notification.type === 'out_of_stock' ? 'out of stock' : 'low stock',
+                                notification: notificationData
+                            });
+                        }
+                    }
+                }
+            } catch (notificationError) {
+                console.error('Failed to create low stock notifications:', notificationError);
+                // Don't fail the order if notification creation fails
+            }
+        }
+        
     } catch (error) {
         throw error;
     }
@@ -151,8 +249,8 @@ exports.createSale = async (req, res) => {
             return res.status(400).json({ message: 'Valid payment method is required (cash, paymaya, gcash)' });
         }
         
-        if (!serviceType || !['pickup', 'dine-in', 'takeout'].includes(serviceType)) {
-            return res.status(400).json({ message: 'Valid service type is required (pickup, dine-in, takeout)' });
+        if (!serviceType || !['dine-in', 'takeout'].includes(serviceType)) {
+            return res.status(400).json({ message: 'Valid service type is required (dine-in, takeout)' });
         }
         
         // Validate main menu item exists
@@ -233,7 +331,7 @@ exports.createSale = async (req, res) => {
         }
         
         // Deduct ingredients from inventory (accounting for removed ingredients)
-        await deductIngredients(menuItemDoc, quantity, processedAddOns, processedRemovedIngredients);
+        await deductIngredients(menuItemDoc, quantity, processedAddOns, processedRemovedIngredients, req);
         
         // Generate order ID if not provided (for single items or mobile orders)
         const finalOrderID = orderID || await generateOrderID();
@@ -387,7 +485,7 @@ exports.createMultipleSales = async (req, res) => {
                 }
                 
                 // Deduct ingredients from inventory
-                await deductIngredients(menuItemDoc, quantity, processedAddOns, processedRemovedIngredients);
+                await deductIngredients(menuItemDoc, quantity, processedAddOns, processedRemovedIngredients, req);
                 
                 // Calculate item total amount
                 let itemTotalAmount = menuItemDoc.price * quantity;

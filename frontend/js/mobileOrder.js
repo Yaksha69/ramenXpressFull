@@ -3,7 +3,7 @@
 // Remove the ES6 import for socket.io-client
 // import { io } from "socket.io-client";
 
-const API_BASE_URL = getApiUrl();
+// Use API_BASE_URL from config.js
 const authToken = localStorage.getItem("authToken"); // For admin/cashier authentication
 
 let loadedOrders = [];
@@ -52,6 +52,27 @@ document.addEventListener("DOMContentLoaded", function () {
     initializeFilters();
     window.addEventListener('focus', loadMobileOrders);
     setInterval(loadMobileOrders, 5000); // every 5 seconds
+    
+    // Add test button for new order notification (for development/testing)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const testButton = document.createElement('button');
+        testButton.textContent = 'Test New Order Notification';
+        testButton.className = 'btn btn-warning btn-sm position-fixed';
+        testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+        testButton.onclick = function() {
+            const testOrder = {
+                _id: 'test_' + Date.now(),
+                orderId: 'TEST' + Math.floor(Math.random() * 1000),
+                customerName: 'Test Customer',
+                total: 150.00,
+                status: 'pending',
+                paymentMethod: 'GCash',
+                createdAt: new Date().toISOString()
+            };
+            showNewOrderNotification(testOrder);
+        };
+        document.body.appendChild(testButton);
+    }
 });
 
 // Initialize filter functionality
@@ -76,16 +97,30 @@ function initializeFilters() {
     });
 
     // Add event listeners for filter changes
-    document.getElementById('filterOrderStatus').addEventListener('change', applyFilters);
-    document.getElementById('filterPaymentMethod').addEventListener('change', applyFilters);
-    document.getElementById('filterApplyBtn').addEventListener('click', applyFilters);
+    const filterOrderStatus = document.getElementById('filterOrderStatus');
+    const filterPaymentMethod = document.getElementById('filterPaymentMethod');
+    const filterApplyBtn = document.getElementById('filterApplyBtn');
+    
+    if (filterOrderStatus) {
+        filterOrderStatus.addEventListener('change', applyFilters);
+    }
+    if (filterPaymentMethod) {
+        filterPaymentMethod.addEventListener('change', applyFilters);
+    }
+    if (filterApplyBtn) {
+        filterApplyBtn.addEventListener('click', applyFilters);
+    }
 }
 
 // Apply all filters
 function applyFilters() {
-    const statusFilter = document.getElementById('filterOrderStatus').value;
-    const paymentFilter = document.getElementById('filterPaymentMethod').value;
-    const dateRange = document.getElementById('filterDate').value;
+    const statusFilterElement = document.getElementById('filterOrderStatus');
+    const paymentFilterElement = document.getElementById('filterPaymentMethod');
+    const dateRangeElement = document.getElementById('filterDate');
+    
+    const statusFilter = statusFilterElement ? statusFilterElement.value : 'all';
+    const paymentFilter = paymentFilterElement ? paymentFilterElement.value : 'all';
+    const dateRange = dateRangeElement ? dateRangeElement.value : '';
 
     // Start with all loaded orders
     filteredOrders = [...loadedOrders];
@@ -129,9 +164,9 @@ function sortOrders(orders) {
         // Define status priority (lower number = higher priority)
         const statusPriority = {
             'pending': 1,
-            'processing': 2,
-            'preparing': 3,
-            'ready': 4,
+            'preparing': 2,
+            'ready': 3,
+            'out-for-delivery': 4,
             'cancelled': 5,
             'delivered': 6
         };
@@ -223,21 +258,38 @@ async function loadMobileOrders() {
         });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const orders = await response.json();
+        
+        // Check for new orders (only if we have previously loaded orders)
+        if (loadedOrders.length > 0) {
+            const newOrders = orders.filter(newOrder => 
+                !loadedOrders.some(existingOrder => existingOrder._id === newOrder._id)
+            );
+            
+            // Show notification for each new order
+            newOrders.forEach(order => {
+                // Only show notification for pending orders (new orders)
+                if (order.status === 'pending') {
+                    showNewMobileOrderNotification(order);
+                }
+            });
+        }
+        
         loadedOrders = orders; // Store for modal use
         filteredOrders = [...orders]; // Initialize filtered orders
         displayOrders(orders);
     } catch (error) {
         console.error("Error loading mobile orders:", error);
-        showNotification("Failed to load orders. Please check your connection.", "error");
+        showGlobalNotification("Failed to load orders. Please check your connection.", "error");
     }
 }
 
-// Status badge
+// Status badge - Updated to include out-for-delivery
 function getStatusBadge(status) {
     const map = {
         pending: '<span class="badge bg-secondary">Pending</span>',
         preparing: '<span class="badge bg-warning text-dark">Preparing</span>',
         ready: '<span class="badge bg-info">Ready</span>',
+        'out-for-delivery': '<span class="badge bg-primary">Out for Delivery</span>',
         delivered: '<span class="badge bg-success">Delivered</span>',
         cancelled: '<span class="badge bg-danger">Cancelled</span>'
     };
@@ -285,97 +337,59 @@ function getCustomerDisplayName(order) {
     return 'Customer';
 }
 
-// Show notification
-function showNotification(message, type = "info") {
-    const alertClass = type === "error" ? "alert-danger" : type === "success" ? "alert-success" : "alert-info";
-    const notification = document.createElement("div");
-    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = "top: 20px; right: 20px; z-index: 9999; min-width: 300px;";
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        if (notification.parentNode) notification.remove();
-    }, 5000);
-}
+// Use global notification functions
+// These functions are now provided by globalNotifications.js
 
-// Add a function to show a centered Bootstrap modal for success
+// Add a function to show success notification using global notification
 function showSuccessModal(message, status) {
-    // Remove any existing modal
-    const existing = document.getElementById('successUpdateModal');
-    if (existing) existing.remove();
-    // Determine color based on status
-    let color = 'success';
-    let iconColor = 'success';
+    // Determine icon based on status
+    let icon = 'success';
+    
     switch ((status || '').toLowerCase()) {
         case 'preparing':
-        case 'preparing':
-            color = 'warning';
-            iconColor = 'warning text-dark';
+            icon = 'warning';
             break;
         case 'ready':
-            color = 'info';
-            iconColor = 'info';
+            icon = 'success';
+            break;
+        case 'out-for-delivery':
+            icon = 'info';
             break;
         case 'delivered':
-            color = 'success';
-            iconColor = 'success';
+            icon = 'success';
             break;
         case 'cancelled':
-            color = 'danger';
-            iconColor = 'danger';
+            icon = 'error';
             break;
         case 'pending':
-            color = 'secondary';
-            iconColor = 'secondary';
+            icon = 'info';
             break;
         default:
-            color = 'success';
-            iconColor = 'success';
+            icon = 'success';
     }
-    // Create modal HTML
-    const modalHtml = `
-    <div class="modal fade" id="successUpdateModal" tabindex="-1" aria-labelledby="successUpdateModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header bg-${color} text-white">
-            <h5 class="modal-title" id="successUpdateModalLabel">Success</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body text-center">
-            <i class="fas fa-check-circle fa-3x mb-3 text-${iconColor}"></i>
-            <div class="fw-bold fs-5 mb-2">${message}</div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modal = new bootstrap.Modal(document.getElementById('successUpdateModal'));
-    modal.show();
-    // Auto-hide after 2 seconds
-    setTimeout(() => {
-        modal.hide();
-    }, 2000);
+    
+    showGlobalNotification(message, icon);
 }
 
 window.viewOrderDetails = async function(orderId) {
     await loadMobileOrders();
     const order = loadedOrders.find(o => o._id === orderId);
     if (!order) {
-        showNotification("Order not found.", "error");
+        showGlobalNotification("Order not found.", "error");
         return;
     }
     // Customer info
     let customerName = getCustomerDisplayName(order);
-    let customerPhone = "";
-    let customerAddress = order.deliveryAddress || "";
+    let customerPhone = "N/A";
+    let customerAddress = order.deliveryAddress || "N/A";
     
     // Get customer phone and address from populated customerId
     if (order.customerId && typeof order.customerId === 'object' && order.customerId !== null) {
-        customerPhone = order.customerId.phone || "";
+        console.log('Customer data:', order.customerId);
+        customerPhone = order.customerId.phone || "N/A";
         // Note: Customer model doesn't have address field, so we use deliveryAddress from order
+    } else {
+        console.log('No customer data found for order:', order.orderId);
     }
     document.getElementById('modalOrderId').textContent = `#${order.orderId || order._id}`;
     document.getElementById('modalOrderDate').textContent = new Date(order.createdAt).toLocaleString();
@@ -387,11 +401,16 @@ window.viewOrderDetails = async function(orderId) {
     const paymentStatusElement = document.getElementById('modalPaymentStatus');
     orderStatusElement.className = 'badge';
     paymentStatusElement.className = 'badge';
-    // Set status classes
+    // Set status classes - Updated to include out-for-delivery
     switch(order.status) {
         case 'preparing':
-        case 'preparing':
             orderStatusElement.classList.add('bg-warning', 'text-dark');
+            break;
+        case 'ready':
+            orderStatusElement.classList.add('bg-info');
+            break;
+        case 'out-for-delivery':
+            orderStatusElement.classList.add('bg-primary');
             break;
         case 'delivered':
             orderStatusElement.classList.add('bg-success');
@@ -399,16 +418,13 @@ window.viewOrderDetails = async function(orderId) {
         case 'pending':
             orderStatusElement.classList.add('bg-secondary');
             break;
-        case 'ready':
-            orderStatusElement.classList.add('bg-info');
-            break;
         case 'cancelled':
             orderStatusElement.classList.add('bg-danger');
             break;
         default:
             orderStatusElement.classList.add('bg-secondary');
     }
-    orderStatusElement.textContent = order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : "N/A";
+    orderStatusElement.textContent = order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('-', ' ') : "N/A";
     // Infer payment status if missing
     let paymentStatus = order.paymentStatus;
     if (!paymentStatus) {
@@ -515,15 +531,21 @@ window.viewOrderDetails = async function(orderId) {
 window.updateOrderStatus = function(orderId) {
     const order = loadedOrders.find(o => o._id === orderId);
     if (!order) {
-        showNotification("Order not found.", "error");
+        showGlobalNotification("Order not found.", "error");
         return;
     }
-    // Set current status badge
+    // Set current status badge - Updated to include out-for-delivery
     const currentStatusSpan = document.getElementById('updateModalCurrentStatus');
     currentStatusSpan.className = 'badge';
     switch(order.status) {
         case 'preparing':
             currentStatusSpan.classList.add('bg-warning', 'text-dark');
+            break;
+        case 'ready':
+            currentStatusSpan.classList.add('bg-info');
+            break;
+        case 'out-for-delivery':
+            currentStatusSpan.classList.add('bg-primary');
             break;
         case 'delivered':
             currentStatusSpan.classList.add('bg-success');
@@ -531,16 +553,13 @@ window.updateOrderStatus = function(orderId) {
         case 'pending':
             currentStatusSpan.classList.add('bg-secondary');
             break;
-        case 'ready':
-            currentStatusSpan.classList.add('bg-info');
-            break;
         case 'cancelled':
             currentStatusSpan.classList.add('bg-danger');
             break;
         default:
             currentStatusSpan.classList.add('bg-secondary');
     }
-    currentStatusSpan.textContent = order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1) : "N/A";
+    currentStatusSpan.textContent = order.status ? order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('-', ' ') : "N/A";
     // Set select to current status
     const statusSelect = document.getElementById('updateModalNewStatus');
     statusSelect.value = order.status || 'pending';
@@ -569,13 +588,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             // Instead of merging partial response, reload all orders to preserve customer info
             await loadMobileOrders();
-            showSuccessModal(`Order status updated to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}!`, newStatus);
+            showSuccessModal(`Order status updated to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1).replace('-', ' ')}!`, newStatus);
             // Hide modal
             const modalEl = document.getElementById('updateOrderStatusModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
             modal.hide();
         } catch (error) {
-            showNotification('Failed to update order status.', 'error');
+            showGlobalNotification('Failed to update order status.', 'error');
         }
     });
 }); 
@@ -678,30 +697,38 @@ function changePageSize(size) {
 }
 
 // --- Socket.IO Real-Time Order Status Updates ---
-// If using modules, you may need: import { io } from 'socket.io-client';
-// If not, ensure <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script> is in your HTML
+// Updated to listen for kitchen updates and provide real-time sync
 
 const socket = io(getSocketUrl()); // Using config system for socket URL
 
 socket.on('connect', () => {
-  console.log('Connected to Socket.IO server');
+  console.log('Connected to Socket.IO server for mobile order updates');
 });
 
+// Listen for kitchen updates (when kitchen changes order status)
+socket.on('kitchenUpdate', (data) => {
+  console.log('Kitchen status update received:', data);
+  // Reload orders to get the latest status
+  loadMobileOrders();
+  // Show global notification
+  showOrderStatusUpdateNotification(data.orderId, data.status, 'kitchen');
+});
+
+// Also listen for general order status updates
 socket.on('orderStatusUpdate', (data) => {
   console.log('Order status update received:', data);
-  // Call your UI update function here
-  // Example:
-  // updateOrderStatusInUI(data.orderId, data.status);
+  // Reload orders to get the latest status
+  loadMobileOrders();
+  // Show global notification
+  showOrderStatusUpdateNotification(data.orderId, data.status, 'general');
 });
 
 function updateOrderStatusInUI(orderId, status) {
-  // Example: Find the order element by data-order-id and update its status
-  const orderElem = document.querySelector(`[data-order-id='${orderId}']`);
-  if (orderElem) {
-    const statusElem = orderElem.querySelector('.order-status');
-    if (statusElem) {
-      statusElem.textContent = status;
-      // Optionally update color, icon, etc.
-    }
+  // Find the order in the loaded orders array
+  const orderIndex = loadedOrders.findIndex(order => order.orderId === orderId || order._id === orderId);
+  if (orderIndex !== -1) {
+    loadedOrders[orderIndex].status = status;
+    // Re-apply filters and display
+    applyFilters();
   }
 } 

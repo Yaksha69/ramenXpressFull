@@ -8,6 +8,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="../css/dashboard.css" rel="stylesheet">
+  <link href="../css/globalNotifications.css" rel="stylesheet">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 </head>
 <body class="bg-light">
@@ -22,74 +25,21 @@
         RamenXpress
       </a>
       <div class="d-flex align-items-center ms-auto">
+        <!-- Notification Dropdown -->
         <div class="dropdown me-3">
           <a href="#" class="d-flex align-items-center text-white text-decoration-none position-relative" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-bell fs-4"></i>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.5rem; padding: 0.25em 0.4em;">
-              3
-            </span>
+            <img src="../assets/notif.png" alt="notif" class="rounded-circle" style="height: 40px; width: 40px;">
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" id="notificationBadge" style="display: none;">0</span>
           </a>
-          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="notificationDropdown" style="min-width: 320px; max-height: 400px; overflow-y: auto;">
-            <li class="dropdown-header bg-light border-bottom">
-              <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">Notifications</h6>
-                <span class="badge bg-primary">3</span>
-              </div>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="notificationDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+            <li class="dropdown-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 fw-bold">Notifications</h6>
+              <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsAsRead()">Mark all read</button>
             </li>
-            <li>
-              <a class="dropdown-item py-3 border-bottom" href="#">
-                <div class="d-flex">
-                  <div class="flex-shrink-0">
-                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                      <i class="fas fa-shopping-cart text-primary"></i>
-                    </div>
-                  </div>
-                  <div class="flex-grow-1 ms-3">
-                    <div class="fw-semibold text-dark">New Order #1234</div>
-                    <div class="text-muted small">Tonkotsu Ramen • Table 5</div>
-                    <div class="text-muted small">2 min ago</div>
-                  </div>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item py-3 border-bottom" href="#">
-                <div class="d-flex">
-                  <div class="flex-shrink-0">
-                    <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                      <i class="fas fa-exclamation-triangle text-warning"></i>
-                    </div>
-                  </div>
-                  <div class="flex-grow-1 ms-3">
-                    <div class="fw-semibold text-dark">Low Stock Alert</div>
-                    <div class="text-muted small">Chicken • Only 5 pieces left</div>
-                    <div class="text-muted small">15 min ago</div>
-                  </div>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item py-3" href="#">
-                <div class="d-flex">
-                  <div class="flex-shrink-0">
-                    <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                      <i class="fas fa-chart-line text-success"></i>
-                    </div>
-                  </div>
-                  <div class="flex-grow-1 ms-3">
-                    <div class="fw-semibold text-dark">Sales Update</div>
-                    <div class="text-muted small">Revenue up 8.5% today</div>
-                    <div class="text-muted small">1 hour ago</div>
-                  </div>
-                </div>
-              </a>
-            </li>
-            <li class="dropdown-divider"></li>
-            <li>
-              <a class="dropdown-item text-center py-2" href="#" style="background-color: #f8f9fa;">
-                <small class="text-primary fw-semibold">View All Notifications</small>
-              </a>
-            </li>
+            <li><hr class="dropdown-divider"></li>
+            <div id="notificationList">
+              <!-- Notifications will be loaded here -->
+            </div>
           </ul>
         </div>
         <div class="dropdown">
@@ -760,10 +710,14 @@
 </body>
 <!-- Bootstrap JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Socket.IO CDN -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- API Config -->
 <script src="../js/config.js"></script>
+<!-- Global Notifications -->
+<script src="../js/globalNotifications.js"></script>
 <!-- Your Chart JS -->
 <script src="../js/dashboard-charts.js"></script>
 <!-- Dashboard JavaScript -->

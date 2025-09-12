@@ -8,6 +8,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="../css/dashboard.css" rel="stylesheet">
+  <link href="../css/globalNotifications.css" rel="stylesheet">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
   <style>
     /* Custom tab styling */
@@ -61,7 +64,25 @@
         RamenXpress
       </a>
       <div class="d-flex align-items-center ms-auto">
-        <img src="../assets/notif.png" alt="notif" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+        <!-- Notification Dropdown -->
+        <div class="dropdown me-3">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none position-relative" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="../assets/notif.png" alt="notif" class="rounded-circle" style="height: 40px; width: 40px;">
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" id="notificationBadge" style="display: none;">0</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="notificationDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+            <li class="dropdown-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 fw-bold">Notifications</h6>
+              <button class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsAsRead()">Mark all read</button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <div id="notificationList">
+              <!-- Notifications will be loaded here -->
+            </div>
+          </ul>
+        </div>
+        
+        <!-- Admin Dropdown -->
         <div class="dropdown">
           <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
             <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2" style="height: 40px; width: 40px;">
@@ -180,6 +201,9 @@
                      <div class="d-flex justify-content-between align-items-center mb-4">
                        <h3 class="card-title mb-0">Raw Ingredients</h3>
                        <div class="d-flex gap-2 align-items-center">
+                         <div class="input-group" style="max-width: 150px; height: 38px;">
+                           <input type="text" class="form-control form-control-sm" id="inventorySearchInput" placeholder="Search all fields...">
+                         </div>
                          <button class="btn btn-outline-secondary btn-sm" id="openLowStockThresholdModal"><i class="fas fa-sliders-h"></i> Low Stock Settings</button>
                          <button class="btn btn-primary" id="addIngredientBtn"><i class="fas fa-plus"></i> Add Ingredients</button>
                        </div>
@@ -222,21 +246,31 @@
                      <div class="d-flex justify-content-between align-items-center mb-4">
                        <h3 class="card-title mb-0">Menu Items</h3>
                        <div class="d-flex gap-2">
+                         <div class="input-group" style="max-width: 150px; height: 38px;">
+                           <input type="text" class="form-control form-control-sm" id="menuSearchInput" placeholder="Search all fields...">
+                         </div>
                          <button class="btn btn-success" id="addMenuBtn"><i class="fas fa-plus"></i> Add Menu</button>
                        </div>
                      </div>
                      <div class="table-responsive">
                        <table class="table table-hover align-middle large">
-                         <thead class="table-light text-uppercase fw-bold">
-                           <tr>
-                             <th>Name</th>
-                             <th>Category</th>
-                             <th>Price</th>
-                             <th>Ingredients</th>
-                             <th>Status</th>
-                             <th>Actions</th>
-                           </tr>
-                         </thead>
+        <thead class="table-light text-uppercase fw-bold">
+          <tr>
+            <th class="sortable" data-column="name" style="cursor: pointer;">
+              Name <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="sortable" data-column="category" style="cursor: pointer;">
+              Category <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="sortable" data-column="price" style="cursor: pointer;">
+              Price <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th class="sortable" data-column="ingredients" style="cursor: pointer;">
+              Ingredients <i class="fas fa-sort ms-1"></i>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
                          <tbody id="menuTableBody">
                            <!-- Menu table content will be populated by JavaScript -->
                          </tbody>
@@ -445,10 +479,14 @@
   <!-- End Low Stock Settings Modal -->
    <!-- Bootstrap JS Bundle (includes Popper) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Socket.IO CDN -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- Config JS (must be loaded first) -->
   <script src="../js/config.js"></script>
+  <!-- Global Notifications -->
+  <script src="../js/globalNotifications.js"></script>
   <script src="../js/inventory.js"></script>
 
   <script>

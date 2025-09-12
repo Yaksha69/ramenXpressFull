@@ -145,9 +145,40 @@ body {
 /* Card Grid Layout */
 #pendingOrders, #preparingOrders {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fill, 18rem);
   gap: 1rem;
   padding: 1rem 0;
+  justify-content: start;
+}
+
+/* Fixed Card Size */
+.order-card {
+  width: 18rem !important;
+  height: auto;
+  min-height: 20rem;
+  max-height: 25rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.order-card .card-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.order-card .card-text {
+  flex-grow: 1;
+  overflow-y: auto;
+  max-height: 12rem;
+}
+
+.order-card .mb-3 {
+  flex-grow: 1;
+  overflow-y: auto;
+  max-height: 10rem;
 }
 
 /* Badge Styles */
@@ -309,4 +340,59 @@ body {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
   }
+}
+
+/* Sidebar Link Colors - Matching Mobile Order */
+#sidebarMenu .nav-link.text-white {
+  color: #dc3545 !important;
+  transition: all 0.3s ease;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  margin: 0.25rem 0.5rem;
+}
+
+#sidebarMenu .nav-link.text-white:hover {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+#sidebarMenu .nav-link.text-white.active {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+#sidebarMenu .nav-link.text-white.active:hover {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+#sidebarMenu .nav-link.text-white.bg-danger {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+#sidebarMenu .nav-link.text-white.bg-danger:hover {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+/* Sidebar Show/Hide States */
+#sidebarMenu.show {
+  transform: translateX(0);
+}
+
+body.sidebar-open {
+  overflow: hidden;
+}
+
+body.sidebar-open::before {
+  content: '';
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1030;
+  transition: opacity 0.3s ease;
 }

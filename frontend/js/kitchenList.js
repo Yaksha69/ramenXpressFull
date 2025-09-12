@@ -1,4 +1,4 @@
-const API_BASE_URL = getApiUrl();
+// Use API_BASE_URL from config.js
 const authToken = localStorage.getItem("authToken");
 
 let kitchenOrders = [];
@@ -48,6 +48,8 @@ function displayOrders() {
 function displayOrderList(containerId, orders) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
+  // Make container wrap small cards nicely
+  container.className = 'd-flex flex-wrap gap-2';
   
   if (orders.length === 0) {
     container.innerHTML = `
@@ -68,7 +70,7 @@ function displayOrderList(containerId, orders) {
 // Create order card
 function createOrderCard(order) {
   const card = document.createElement('div');
-  card.className = `card order-card ${order.status}`;
+  card.className = 'card shadow-sm border-0';
   card.style.width = '18rem';
   
   // Calculate total order amount
@@ -78,53 +80,32 @@ function createOrderCard(order) {
     return sum + itemTotal + addOnsTotal;
   }, 0);
   
+  const itemsCount = order.items?.length || 0;
+  const firstItem = order.items && order.items[0] ? `${order.items[0].menuItem.name} x${order.items[0].quantity}` : 'No items';
   card.innerHTML = `
-    <div class="card-body">
-      <h5 class="card-title">#${order.orderId}</h5>
-      <h6 class="card-subtitle mb-2 text-muted">${order.customerName}</h6>
-      <p class="card-text">
-        <small class="text-muted">${new Date(order.orderTime).toLocaleTimeString()}</small><br>
-        <span class="badge ${order.type === 'mobile' ? 'badge-mobile' : 'badge-pos'}">${order.type.toUpperCase()}</span>
-        <span class="badge ${order.status === 'pending' ? 'bg-warning' : 'bg-info'}">${order.status.toUpperCase()}</span>
-      </p>
-      
-      <div class="mb-3">
-        ${order.items.map(item => `
-          <div class="mb-2">
-            <div class="fw-bold">${item.menuItem.name} x${item.quantity}</div>
-            <div class="text-muted small">₱${(item.menuItem.price * item.quantity).toFixed(2)}</div>
-            ${item.selectedAddOns && item.selectedAddOns.length > 0 ? `
-              <div class="mt-1">
-                <small class="text-success fw-bold">+ Add-ons:</small>
-                ${item.selectedAddOns.map(addon => `
-                  <div class="text-success small ms-2">+ ${addon.name} (₱${addon.price.toFixed(2)})</div>
-                `).join('')}
-              </div>
-            ` : ''}
-            ${item.removedIngredients && item.removedIngredients.length > 0 ? `
-              <div class="mt-1">
-                <small class="text-danger fw-bold">- Remove:</small>
-                ${item.removedIngredients.map(ingredient => `
-                  <div class="text-danger small ms-2">- ${ingredient.name}</div>
-                `).join('')}
-              </div>
-            ` : ''}
-          </div>
-        `).join('')}
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <h6 class="card-title mb-0">#${order.orderId}</h6>
+        <span class="badge ${order.status === 'pending' ? 'bg-warning text-dark' : 'bg-info text-white'}">${order.status}</span>
       </div>
-      
-      <div class="d-flex justify-content-between align-items-center">
-        <div class="fw-bold text-primary">Total: ₱${totalAmount.toFixed(2)}</div>
+      <div class="text-muted small mb-2">
+        ${order.customerName || 'Walk-in'} • ${new Date(order.orderTime).toLocaleTimeString()} • ${itemsCount} item${itemsCount!==1?'s':''}
+      </div>
+      <p class="card-text mb-2 small">
+        ${firstItem}${itemsCount > 1 ? `, +${itemsCount - 1} more` : ''}
+      </p>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <div class="fw-semibold text-primary">₱${totalAmount.toFixed(2)}</div>
         <div class="d-flex gap-1">
-          <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order.id}')" title="View Details">
+          <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order.id}')" title="View">
             <i class="fas fa-eye"></i>
           </button>
           ${order.status === 'pending' ? `
-            <button class="btn btn-sm btn-warning" onclick="updateOrderStatus('${order.id}', 'preparing')" title="Start Cooking">
+            <button class="btn btn-sm btn-warning" onclick="updateOrderStatus('${order.id}', 'preparing')" title="Start">
               <i class="fas fa-play"></i>
             </button>
           ` : `
-            <button class="btn btn-sm btn-success" onclick="updateOrderStatus('${order.id}', 'ready')" title="Mark Ready">
+            <button class="btn btn-sm btn-success" onclick="updateOrderStatus('${order.id}', 'ready')" title="Ready">
               <i class="fas fa-check"></i>
             </button>
           `}
@@ -239,6 +220,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load kitchen orders
   loadKitchenOrders();
   setInterval(loadKitchenOrders, 30000); // Refresh every 30 seconds
+  
+  // Add test button for notifications (for development/testing)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    const testButton = document.createElement('button');
+    testButton.textContent = 'Test Notification';
+    testButton.className = 'btn btn-success btn-sm position-fixed';
+    testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+    testButton.onclick = function() {
+      showGlobalNotification('Test notification from Kitchen!', 'success');
+    };
+    document.body.appendChild(testButton);
+  }
 });
 
 // Initialize sidebar functionality

@@ -66,7 +66,7 @@ const salesSchema = new mongoose.Schema({
     },
     serviceType: {
         type: String,
-        enum: ['pickup', 'dine-in', 'takeout'],
+        enum: ['dine-in', 'takeout'],
         required: true
     },
     totalAmount: {
@@ -94,7 +94,7 @@ const salesSchema = new mongoose.Schema({
     // Kitchen workflow status
     status: {
         type: String,
-        enum: ['pending', 'preparing', 'ready', 'delivered', 'cancelled'],
+        enum: ['pending', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
         default: 'pending'
     },
     // Array of items for POS orders (multiple items in one order)

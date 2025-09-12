@@ -1,5 +1,6 @@
 const Inventory = require('../models/inventory');
 const Settings = require('../models/settings');
+const notificationController = require('./notificationController');
 
 // Helper function to calculate default status based on stocks
 const DEFAULT_LOW_STOCK_THRESHOLD = 10;
@@ -80,6 +81,49 @@ exports.createInventory = async (req, res) => {
       calculatedStatus,
       isStatusOverridden: finalStatus !== calculatedStatus
     };
+    
+    // Create notification for new inventory items if they are low stock or out of stock
+    try {
+      let notification = null;
+      
+      if (stocks <= 0) {
+        // Out of stock notification
+        notification = await notificationController.createNotification({
+          type: 'warning',
+          title: `⚠️ New Item Out of Stock`,
+          message: `${newItem.name} was added but is out of stock`,
+          targetRoles: ['admin', 'cashier'],
+          priority: 'high'
+        });
+      } else if (stocks <= threshold) {
+        // Low stock notification
+        notification = await notificationController.createNotification({
+          type: 'warning',
+          title: `📉 New Item Low Stock`,
+          message: `${newItem.name} was added but is running low (${stocks} remaining)`,
+          targetRoles: ['admin', 'cashier'],
+          priority: 'medium'
+        });
+      }
+      
+      // Emit real-time notification if created
+      if (notification) {
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('inventoryUpdate', {
+            itemId: newItem._id,
+            itemName: newItem.name,
+            stocks: stocks,
+            status: finalStatus,
+            notification: notification
+          });
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to create inventory notification:', notificationError);
+      // Don't fail the inventory creation if notification fails
+    }
+    
     res.status(201).json(itemWithCalculatedStatus);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -113,6 +157,49 @@ exports.updateInventory = async (req, res) => {
       calculatedStatus,
       isStatusOverridden: finalStatus !== calculatedStatus
     };
+    
+    // Create notification for inventory status changes
+    try {
+      let notification = null;
+      
+      if (stocks <= 0) {
+        // Out of stock notification
+        notification = await notificationController.createNotification({
+          type: 'warning',
+          title: `⚠️ Out of Stock Alert`,
+          message: `${updatedItem.name} is now out of stock`,
+          targetRoles: ['admin', 'cashier'],
+          priority: 'high'
+        });
+      } else if (stocks <= threshold) {
+        // Low stock notification
+        notification = await notificationController.createNotification({
+          type: 'warning',
+          title: `📉 Low Stock Alert`,
+          message: `${updatedItem.name} is running low (${stocks} remaining)`,
+          targetRoles: ['admin', 'cashier'],
+          priority: 'medium'
+        });
+      }
+      
+      // Emit real-time notification if created
+      if (notification) {
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('inventoryUpdate', {
+            itemId: updatedItem._id,
+            itemName: updatedItem.name,
+            stocks: stocks,
+            status: finalStatus,
+            notification: notification
+          });
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to create inventory notification:', notificationError);
+      // Don't fail the inventory update if notification fails
+    }
+    
     res.json(itemWithCalculatedStatus);
   } catch (err) {
     res.status(400).json({ error: err.message });

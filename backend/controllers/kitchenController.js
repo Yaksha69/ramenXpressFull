@@ -1,5 +1,6 @@
 const MobileOrder = require('../models/mobileOrder');
 const Sales = require('../models/sales');
+const notificationController = require('./notificationController');
 
 // Get all kitchen orders (pending + preparing)
 exports.getKitchenOrders = async (req, res) => {
@@ -89,12 +90,49 @@ exports.updateOrderStatus = async (req, res) => {
         );
 
         if (mobileOrder) {
-            // Emit real-time update
-            req.app.get('io').emit('kitchenUpdate', {
-                orderId,
-                status,
-                type: 'mobile'
-            });
+            // Create notification for status update
+            try {
+                const customerName = mobileOrder.customerId?.firstName || 
+                                   mobileOrder.customerId?.name || 
+                                   'Customer';
+                
+                const notification = await notificationController.createStatusUpdateNotification({
+                    orderId: mobileOrder.orderId,
+                    status: mobileOrder.status,
+                    customerName: customerName
+                });
+                
+                // Emit real-time update with notification data
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('kitchenUpdate', {
+                        orderId,
+                        status,
+                        type: 'mobile',
+                        notification: notification
+                    });
+                    
+                    // Also emit general order status update
+                    io.emit('orderStatusUpdate', {
+                        orderId: mobileOrder._id,
+                        status: mobileOrder.status,
+                        customerId: mobileOrder.customerId?._id,
+                        order: mobileOrder,
+                        notification: notification
+                    });
+                }
+            } catch (notificationError) {
+                console.error('Failed to create kitchen notification:', notificationError);
+                // Still emit the socket event even if notification fails
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('kitchenUpdate', {
+                        orderId,
+                        status,
+                        type: 'mobile'
+                    });
+                }
+            }
             
             return res.json({ success: true, order: mobileOrder });
         }
@@ -107,12 +145,44 @@ exports.updateOrderStatus = async (req, res) => {
         );
 
         if (posOrder) {
-            // Emit real-time update
-            req.app.get('io').emit('kitchenUpdate', {
-                orderId,
-                status,
-                type: 'pos'
-            });
+            // Create notification for POS order status update
+            try {
+                const notification = await notificationController.createStatusUpdateNotification({
+                    orderId: posOrder.orderID,
+                    status: posOrder.status,
+                    customerName: 'POS Customer'
+                });
+                
+                // Emit real-time update with notification data
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('kitchenUpdate', {
+                        orderId,
+                        status,
+                        type: 'pos',
+                        notification: notification
+                    });
+                    
+                    // Also emit general order status update
+                    io.emit('orderStatusUpdate', {
+                        orderId: posOrder._id,
+                        status: posOrder.status,
+                        order: posOrder,
+                        notification: notification
+                    });
+                }
+            } catch (notificationError) {
+                console.error('Failed to create POS kitchen notification:', notificationError);
+                // Still emit the socket event even if notification fails
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('kitchenUpdate', {
+                        orderId,
+                        status,
+                        type: 'pos'
+                    });
+                }
+            }
             
             return res.json({ success: true, order: posOrder });
         }

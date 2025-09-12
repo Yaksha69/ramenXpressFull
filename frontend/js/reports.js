@@ -7,6 +7,18 @@ const itemsPerPage = 10;
 // API Configuration - using the config.js file
 // Make sure config.js is loaded before this script
 
+// Add test button for notifications (for development/testing)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  const testButton = document.createElement('button');
+  testButton.textContent = 'Test Notification';
+  testButton.className = 'btn btn-info btn-sm position-fixed';
+  testButton.style.cssText = 'bottom: 20px; right: 20px; z-index: 9999;';
+  testButton.onclick = function() {
+    showGlobalNotification('Test notification from Reports!', 'info');
+  };
+  document.body.appendChild(testButton);
+}
+
 // Improved response handler
 function handleResponse(response) {
   if (!response.ok) {
@@ -967,7 +979,7 @@ function generateCSV(transactions) {
     transaction.id,
     transaction.source === 'mobile' ? 'Mobile Order' : 'POS Sale',
     transaction.type,
-    transaction.items,
+    transaction.itemsString || (transaction.items ? transaction.items.map(item => `${item.name} x${item.quantity}`).join(', ') : 'No items'),
     transaction.totalPrice.toFixed(2),
     transaction.date
   ]);
