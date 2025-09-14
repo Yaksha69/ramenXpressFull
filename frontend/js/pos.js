@@ -404,16 +404,13 @@ function renderMenuItems() {
         if (!item.canBeOrdered) {
             cardClass += " out-of-stock-card";
             stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">Some Out of Stock</span>';
-        } else if (item.hasLowStock) {
-            cardClass += " low-stock-card";
-            stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">Low Stock</span>';
         }
         
         return `
             <div class="col-6 col-md-4 col-lg-3">
                 <div class="${cardClass}" onclick="openModal('${item._id}', '${item.name}', ${item.price}, '${item.category}', '${backendImage}')">
                     ${stockBadge}
-                    <img src="${imageUrl}" class="card-img-top" alt="${item.name}" style="height: 150px; object-fit: cover;" onerror="this.src='../assets/ramen1.jpg'">
+                    <img src="${imageUrl}" class="card-img-top" alt="${item.name}" style="height: 150px; object-fit: contain;" onerror="this.src='../assets/ramen1.jpg'">
                     <div class="card-body p-2">
                         <h6 class="card-title mb-1">${item.name}</h6>
                         <p class="card-text text-danger fw-bold mb-0">₱${item.price.toFixed(2)}</p>
@@ -426,49 +423,58 @@ function renderMenuItems() {
 
 // Helper function to get correct image URL from backend data
 function getImageUrl(imagePath) {
-    console.log('Processing image path from backend:', imagePath);
-    
-    if (!imagePath) {
-        console.log('No image path provided, using default');
-        return '../assets/ramen1.jpg';
-    }
-    
-    // If it's already a full URL, return as is
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        console.log('Full URL detected:', imagePath);
-        return imagePath;
-    }
-    
-    // If it starts with /uploads/, it's a backend uploaded image
-    if (imagePath.startsWith('/uploads/')) {
-        const fullUrl = `${getUploadUrl()}${imagePath}`;
-        console.log('Backend uploaded image:', fullUrl);
-        return fullUrl;
-    }
-    
-    // If it's a relative path from backend (../assets/...), use it directly
-    if (imagePath.startsWith('../assets/')) {
-        console.log('Using backend asset path:', imagePath);
-        return imagePath;
-    }
-    
-    // If it's just a filename (like uploaded images), it's a backend uploaded image
-    if (!imagePath.includes('/') && imagePath.includes('.')) {
-        const fullUrl = `${getUploadUrl()}/uploads/menus/${imagePath}`;
-        console.log('Backend uploaded filename, using uploads path:', fullUrl);
-        return fullUrl;
-    }
-    
-    // If it's just a filename without extension, assume it's in assets
-    if (!imagePath.includes('/')) {
-        const assetPath = `../assets/${imagePath}`;
-        console.log('Backend filename, using assets path:', assetPath);
-        return assetPath;
-    }
-    
-    // If it's any other path from backend, try to use it as is
-    console.log('Using backend path as is:', imagePath);
+  console.log('Processing image path from backend:', imagePath);
+  
+  if (!imagePath) {
+    console.log('No image path provided, using default');
+    return '../assets/ramen1.jpg';
+  }
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    console.log('Full URL detected:', imagePath);
     return imagePath;
+  }
+  
+  // If it starts with /uploads/, it's a backend uploaded image
+  if (imagePath.startsWith('/uploads/')) {
+    const fullUrl = `${getUploadUrl()}${imagePath}`;
+    console.log('Backend uploaded image:', fullUrl);
+    return fullUrl;
+  }
+  
+  // If it's a relative path from backend (../assets/...), use it directly
+  if (imagePath.startsWith('../assets/')) {
+    console.log('Using backend asset path:', imagePath);
+    return imagePath;
+  }
+  
+  // If it's just a filename (like uploaded images), it's a backend uploaded image
+  if (!imagePath.includes('/') && imagePath.includes('.')) {
+    // Check if it's a default image that might not exist in uploads
+    if (imagePath === 'default-ramen.jpg' || imagePath.startsWith('default-')) {
+      console.log('Default image detected, using database image instead');
+      // Use the specific image from the database
+      const databaseImage = '1756859309524-197330587-databaseDesign.jpg';
+      const fullUrl = `${getUploadUrl()}/uploads/menus/${databaseImage}`;
+      console.log('Using database image:', fullUrl);
+      return fullUrl;
+    }
+    const fullUrl = `${getUploadUrl()}/uploads/menus/${imagePath}`;
+    console.log('Backend uploaded filename, using uploads path:', fullUrl);
+    return fullUrl;
+  }
+  
+  // If it's just a filename without extension, assume it's in assets
+  if (!imagePath.includes('/')) {
+    const assetPath = `../assets/${imagePath}`;
+    console.log('Backend filename, using assets path:', assetPath);
+    return assetPath;
+  }
+  
+  // If it's any other path from backend, try to use it as is
+  console.log('Using backend path as is:', imagePath);
+  return imagePath;
 }
 
 // Open Modal
@@ -538,36 +544,6 @@ function updateModalStockStatus() {
     if (!currentModalItem.canBeOrdered) {
         // Item has out of stock ingredients - no warning message shown
         stockStatusContainer.innerHTML = '';
-    } else if (currentModalItem.hasLowStock) {
-        // Item has low stock
-        stockStatusContainer.innerHTML = `
-            <div class="alert alert-warning py-2 mb-2">
-                <i class="fas fa-exclamation-circle me-1"></i>
-                <strong>Limited availability</strong> - Some ingredients running low
-            </div>
-        `;
-        
-        // Show low stock ingredients
-        if (currentModalItem.ingredientsWithStock && currentModalItem.ingredientsWithStock.length > 0) {
-            const lowStockIngredients = currentModalItem.ingredientsWithStock.filter(ing => ing.isLowStock);
-            if (lowStockIngredients.length > 0) {
-                const lowStockList = document.createElement('div');
-                lowStockList.className = 'text-warning small';
-                lowStockList.innerHTML = `
-                    <strong>Low stock ingredients:</strong><br>
-                    ${lowStockIngredients.map(ing => `• ${ing.inventoryItem} (Need: ${ing.requiredQuantity}, Available: ${ing.currentStock})`).join('<br>')}
-                `;
-                stockStatusContainer.appendChild(lowStockList);
-            }
-        }
-    } else {
-        // Item is fully available
-        stockStatusContainer.innerHTML = `
-            <div class="alert alert-success py-2 mb-2">
-                <i class="fas fa-check-circle me-1"></i>
-                <strong>Available</strong> - All ingredients in stock
-            </div>
-        `;
     }
 }
 
@@ -619,7 +595,7 @@ function loadAddOnsFromMenu() {
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="addon_${addon._id}">
                             <label class="form-check-label" for="addon_${addon._id}">
-                                <img src="${getImageUrl(addon.image)}" class="img-fluid mb-1" style="height: 40px; object-fit: cover;" alt="${addon.name}" onerror="this.src='../assets/ramen1.jpg'">
+                                <img src="${getImageUrl(addon.image)}" class="img-fluid mb-1" style="height: 40px; object-fit: contain;" alt="${addon.name}" onerror="this.src='../assets/ramen1.jpg'">
                                 <small>${addon.name}</small>
                                 <div class="text-danger small">+₱${addon.price.toFixed(2)}</div>
                             </label>
@@ -764,9 +740,6 @@ async function loadMenuIngredients(menuItemId) {
             if (ingredient.isOutOfStock) {
                 cardClass += " border-danger";
                 stockBadge = '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Out</span>';
-            } else if (ingredient.isLowStock) {
-                cardClass += " border-warning";
-                stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Low</span>';
             } else {
                 cardClass += " border-success";
             }
@@ -826,9 +799,6 @@ async function loadAddOns() {
             if (!addon.canBeOrdered) {
                 cardClass += " border-danger";
                 stockBadge = '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Out</span>';
-            } else if (addon.hasLowStock) {
-                cardClass += " border-warning";
-                stockBadge = '<span class="badge bg-warning text-dark position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Low</span>';
             } else {
                 cardClass += " border-success";
             }

@@ -14,36 +14,57 @@ let filteredOrders = [];
 
 // Helper function to get correct image URL from backend data
 function getImageUrl(imagePath) {
+  console.log('getImageUrl called with:', imagePath);
+  
   if (!imagePath) {
+    console.log('No image path, using default');
     return '../assets/ramen1.jpg'; // Default image
   }
   
   // If it's already a full URL, return as is
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    console.log('Full URL detected:', imagePath);
     return imagePath;
   }
   
   // If it starts with /uploads/, it's a backend uploaded image
   if (imagePath.startsWith('/uploads/')) {
-    return `${getUploadUrl()}${imagePath}`;
+    const url = `${getUploadUrl()}${imagePath}`;
+    console.log('Backend uploaded image:', url);
+    return url;
   }
   
   // If it's a relative path from backend (../assets/...), use it directly
   if (imagePath.startsWith('../assets/')) {
+    console.log('Using backend asset path:', imagePath);
     return imagePath;
   }
   
   // If it's just a filename (like uploaded images), it's a backend uploaded image
   if (!imagePath.includes('/') && imagePath.includes('.')) {
-    return `${getUploadUrl()}/uploads/menus/${imagePath}`;
+    // Check if it's a default image that might not exist in uploads
+    if (imagePath === 'default-ramen.jpg' || imagePath.startsWith('default-')) {
+      console.log('Default image detected, using database image instead');
+      // Use the specific image from the database
+      const databaseImage = '1756859309524-197330587-databaseDesign.jpg';
+      const url = `${getUploadUrl()}/uploads/menus/${databaseImage}`;
+      console.log('Using database image:', url);
+      return url;
+    }
+    const url = `${getUploadUrl()}/uploads/menus/${imagePath}`;
+    console.log('Backend uploaded filename, using uploads path:', url);
+    return url;
   }
   
   // If it's just a filename without extension, assume it's in assets
   if (!imagePath.includes('/')) {
-    return `../assets/${imagePath}`;
+    const url = `../assets/${imagePath}`;
+    console.log('Backend filename, using assets path:', url);
+    return url;
   }
   
   // If it's any other path from backend, try to use it as is
+  console.log('Using backend path as is:', imagePath);
   return imagePath;
 }
 
@@ -244,16 +265,23 @@ function displayOrders(orders) {
         tbody.appendChild(row);
     });
 
+    // Get current filter values for conditional display
+    const statusFilterElement = document.getElementById('filterOrderStatus');
+    const currentStatusFilter = statusFilterElement ? statusFilterElement.value : 'all';
+    
+    // Get delivered orders for separator display
+    const deliveredOrders = sortedOrders.filter(order => order.status === 'delivered');
+    
     // If there are delivered orders, add a separator row
-    if (statusFilter === 'all' && delivered.length > 0) {
+    if (currentStatusFilter === 'all' && deliveredOrders.length > 0) {
         const sepRow = document.createElement("tr");
         sepRow.innerHTML = `<td colspan="7" class="text-center text-success fw-bold bg-light">Delivered Orders</td>`;
         tbody.appendChild(sepRow);
     }
 
     // Show delivered orders below
-    if (statusFilter === 'all') {
-        delivered.forEach(order => {
+    if (currentStatusFilter === 'all') {
+        deliveredOrders.forEach(order => {
             const orderDate = new Date(order.createdAt).toLocaleString();
             const statusBadge = getStatusBadge(order.status);
             let paymentStatus = order.paymentStatus;
@@ -788,4 +816,52 @@ function updateOrderStatusInUI(orderId, status) {
     // Re-apply filters and display
     applyFilters();
   }
-} 
+}
+
+// --- Sidebar Toggle Functionality ---
+// Initialize sidebar functionality when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarMenu = document.getElementById('sidebarMenu');
+  const closeSidebar = document.getElementById('closeSidebar');
+  const body = document.body;
+
+  // Toggle sidebar on button click
+  if (sidebarToggle && sidebarMenu) {
+    sidebarToggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      sidebarMenu.classList.toggle('show');
+      body.classList.toggle('sidebar-open');
+    });
+  }
+  
+  // Close sidebar on close button click
+  if (closeSidebar && sidebarMenu) {
+    closeSidebar.addEventListener('click', function() {
+      sidebarMenu.classList.remove('show');
+      body.classList.remove('sidebar-open');
+    });
+  }
+  
+  // Close sidebar when clicking outside on mobile
+  document.addEventListener('click', function(e) {
+    if (window.innerWidth < 768 && 
+        sidebarMenu && 
+        sidebarMenu.classList.contains('show') && 
+        !sidebarMenu.contains(e.target) && 
+        !sidebarToggle.contains(e.target)) {
+      sidebarMenu.classList.remove('show');
+      body.classList.remove('sidebar-open');
+    }
+  });
+
+  // Handle window resize
+  function handleResize() {
+    if (window.innerWidth >= 768) {
+      sidebarMenu.classList.remove('show');
+      body.classList.remove('sidebar-open');
+    }
+  }
+
+  window.addEventListener('resize', handleResize);
+}); 

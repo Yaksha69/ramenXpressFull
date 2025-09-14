@@ -507,6 +507,16 @@ async function loadDashboardData() {
   }
 
   try {
+    // Calculate this week's date range
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of current week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
+
     // Fetch sales summary data for this week
     const salesResponse = await fetch(`${getApiUrl()}/sales/sales-summary?period=week`, {
       headers: {
@@ -521,20 +531,60 @@ async function loadDashboardData() {
 
     const salesData = await salesResponse.json();
     
-    // Update Total Sales card
+    // Fetch mobile orders for this week
+    const mobileOrdersResponse = await fetch(`${getApiUrl()}/mobile-orders/all`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let mobileOrdersData = { orders: [] };
+    if (mobileOrdersResponse.ok) {
+      const allMobileOrders = await mobileOrdersResponse.json();
+      // Filter mobile orders for this week
+      mobileOrdersData.orders = allMobileOrders.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate >= startOfWeek && orderDate <= endOfWeek;
+      });
+    } else {
+      console.warn('Failed to fetch mobile orders:', mobileOrdersResponse.status);
+    }
+
+    // Calculate combined totals
+    let totalSales = 0;
+    let totalOrders = 0;
+    let mobileOrderRevenue = 0;
+    let mobileOrderCount = 0;
+
+    // Calculate POS sales totals
+    if (salesData.sales) {
+      totalSales = salesData.sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+      totalOrders = salesData.totalOrders || 0;
+    }
+
+    // Calculate mobile order totals
+    if (mobileOrdersData.orders) {
+      mobileOrderRevenue = mobileOrdersData.orders.reduce((sum, order) => sum + (order.total || 0), 0);
+      mobileOrderCount = mobileOrdersData.orders.length;
+    }
+
+    // Update Total Sales card with combined data
     const totalSalesElement = document.getElementById('totalSalesCard');
-    if (totalSalesElement && salesData.sales) {
-      const totalSales = salesData.sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
-      totalSalesElement.textContent = `₱${totalSales.toLocaleString()}`;
+    if (totalSalesElement) {
+      const combinedSales = totalSales + mobileOrderRevenue;
+      totalSalesElement.textContent = `₱${combinedSales.toLocaleString()}`;
       totalSalesElement.className = 'fw-bold mb-2 text-success';
     }
 
-    // Update Total Orders card
+    // Update Total Orders card with combined data
     const totalOrdersElement = document.getElementById('totalOrdersCard');
     if (totalOrdersElement) {
-      totalOrdersElement.textContent = salesData.totalOrders || '0';
+      const combinedOrders = totalOrders + mobileOrderCount;
+      totalOrdersElement.textContent = combinedOrders.toString();
       totalOrdersElement.className = 'fw-bold mb-2';
     }
+
 
     // Fetch customer count data for this week
     const customerResponse = await fetch(`${getApiUrl()}/customers/count?period=week`, {
@@ -563,7 +613,24 @@ async function loadDashboardData() {
       }
     }
 
-    console.log('Dashboard data loaded successfully:', { salesData, customerData });
+    // Add mobile order metrics to console for debugging
+    console.log('Dashboard data loaded successfully:', { 
+      salesData, 
+      customerData, 
+      mobileOrdersData,
+      combinedMetrics: {
+        totalSales: totalSales + mobileOrderRevenue,
+        totalOrders: totalOrders + mobileOrderCount,
+        posSales: totalSales,
+        posOrders: totalOrders,
+        mobileRevenue: mobileOrderRevenue,
+        mobileOrders: mobileOrderCount
+      }
+    });
+
+    // Store mobile order data for potential future use
+    window.dashboardMobileOrders = mobileOrdersData.orders;
+
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     
@@ -585,6 +652,7 @@ async function loadDashboardData() {
       newCustomerElement.textContent = 'Error';
       newCustomerElement.className = 'fw-bold mb-2 text-danger';
     }
+
   }
 }
 
