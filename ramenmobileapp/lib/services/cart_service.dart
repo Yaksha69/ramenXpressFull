@@ -53,11 +53,13 @@ class CartService {
     }
   }
 
-  Future<void> addToCart(MenuItem menuItem, List<AddOn> selectedAddOns) async {
+  Future<void> addToCart(MenuItem menuItem, List<AddOn> selectedAddOns, {List<String>? removedIngredients}) async {
+    final removedIngredientsToUse = removedIngredients ?? [];
     final existingIndex = _cartItems.indexWhere(
       (item) =>
           item.menuItem.name == menuItem.name &&
-          _areAddOnsEqual(item.selectedAddOns, selectedAddOns),
+          _areAddOnsEqual(item.selectedAddOns, selectedAddOns) &&
+          _areRemovedIngredientsEqual(item.removedIngredients, removedIngredientsToUse),
     );
 
     if (existingIndex != -1) {
@@ -70,6 +72,7 @@ class CartService {
           menuItem: menuItem,
           quantity: 1,
           selectedAddOns: selectedAddOns,
+          removedIngredients: removedIngredientsToUse,
         ),
       );
     }
@@ -96,6 +99,18 @@ class CartService {
   Future<void> clearCart() async {
     _cartItems.clear();
     await saveCart();
+  }
+
+  bool _areRemovedIngredientsEqual(List<String> ingredients1, List<String> ingredients2) {
+    if (ingredients1.length != ingredients2.length) return false;
+    final sorted1 = List<String>.from(ingredients1)..sort();
+    final sorted2 = List<String>.from(ingredients2)..sort();
+    for (int i = 0; i < sorted1.length; i++) {
+      if (sorted1[i] != sorted2[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool _areAddOnsEqual(List<AddOn> addOns1, List<AddOn> addOns2) {

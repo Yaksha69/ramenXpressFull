@@ -116,6 +116,7 @@ class Order {
       case 'ready':
         return OrderStatus.ready;
       case 'out for delivery':
+      case 'out-for-delivery':
       case 'outfordelivery':
       case 'on the way':
         return OrderStatus.outForDelivery;

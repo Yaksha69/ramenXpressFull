@@ -4,11 +4,13 @@ class CartItem {
   final MenuItem menuItem;
   final int quantity;
   final List<AddOn> selectedAddOns;
+  final List<String> removedIngredients;
 
   CartItem({
     required this.menuItem,
     required this.quantity,
     required this.selectedAddOns,
+    this.removedIngredients = const [],
   });
 
   double get totalPrice {
@@ -25,11 +27,13 @@ class CartItem {
     MenuItem? menuItem,
     int? quantity,
     List<AddOn>? selectedAddOns,
+    List<String>? removedIngredients,
   }) {
     return CartItem(
       menuItem: menuItem ?? this.menuItem,
       quantity: quantity ?? this.quantity,
       selectedAddOns: selectedAddOns ?? this.selectedAddOns,
+      removedIngredients: removedIngredients ?? this.removedIngredients,
     );
   }
 
@@ -38,6 +42,7 @@ class CartItem {
       'menuItem': menuItem.toJson(),
       'quantity': quantity,
       'selectedAddOns': selectedAddOns.map((addOn) => addOn.toJson()).toList(),
+      'removedIngredients': removedIngredients,
     };
   }
 
@@ -48,6 +53,7 @@ class CartItem {
       selectedAddOns: (json['selectedAddOns'] as List? ?? [])
           .map((addOnJson) => AddOn.fromJson(addOnJson))
           .toList(),
+      removedIngredients: List<String>.from(json['removedIngredients'] ?? []),
     );
   }
 }

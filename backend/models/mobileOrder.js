@@ -16,6 +16,9 @@ const mobileOrderSchema = new mongoose.Schema({
     selectedAddOns: [{
       name: { type: String, required: true },
       price: { type: Number, required: true }
+    }],
+    removedIngredients: [{
+      type: String
     }]
   }],
   total: { type: Number, required: true },

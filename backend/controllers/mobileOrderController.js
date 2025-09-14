@@ -224,9 +224,11 @@ exports.updateOrderStatus = async (req, res) => {
       const io = req.app.get('io');
       if (io) {
         io.emit('orderStatusUpdate', {
-          orderId: updatedOrder._id,
+          orderId: updatedOrder.orderId, // Use the display order ID, not MongoDB _id
           status: updatedOrder.status,
           customerId: updatedOrder.customerId?._id,
+          deliveryMethod: updatedOrder.deliveryMethod,
+          items: updatedOrder.items,
           order: updatedOrder,
           notification: notification
         });
@@ -237,9 +239,11 @@ exports.updateOrderStatus = async (req, res) => {
       const io = req.app.get('io');
       if (io) {
         io.emit('orderStatusUpdate', {
-          orderId: updatedOrder._id,
+          orderId: updatedOrder.orderId, // Use the display order ID, not MongoDB _id
           status: updatedOrder.status,
           customerId: updatedOrder.customerId?._id,
+          deliveryMethod: updatedOrder.deliveryMethod,
+          items: updatedOrder.items,
           order: updatedOrder
         });
       }

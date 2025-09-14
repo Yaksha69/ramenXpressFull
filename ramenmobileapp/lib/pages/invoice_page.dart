@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/socket_service.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
 import '../widgets/delivery_animation.dart';
 
 class InvoicePage extends StatefulWidget {
@@ -24,6 +24,10 @@ class _InvoicePageState extends State<InvoicePage> {
     order = widget.order;
     currencyFormat = NumberFormat.currency(symbol: '₱');
     dateFormat = DateFormat('MMM dd, yyyy hh:mm a');
+    
+    // Set socket context for notifications
+    SocketService().setContext(context);
+    
     // Listen for real-time order status updates
     SocketService().connect();
     _orderStatusUpdateHandler = (data) {
@@ -86,33 +90,6 @@ class _InvoicePageState extends State<InvoicePage> {
     }
   }
 
-  Widget _buildStatusBadge(String status) {
-    Color color = _getStatusColor(status);
-    String label = status.toUpperCase();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E1), // light yellow
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFD54F), width: 2),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.hourglass_empty, color: color, size: 28),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Order Status', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildOrderProgress(String status) {
     final steps = [
@@ -482,8 +459,7 @@ class _InvoicePageState extends State<InvoicePage> {
   }
 
   bool _shouldShowAnimation(String status) {
-    return status.toLowerCase() == 'ready' ||
-           status.toLowerCase() == 'out for delivery' || 
+    return status.toLowerCase() == 'out for delivery' || 
            status.toLowerCase() == 'outfordelivery' ||
            status.toLowerCase() == 'on the way';
   }
@@ -658,7 +634,6 @@ class _InvoicePageState extends State<InvoicePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatusBadge(order['status'] ?? 'pending'),
             // Add Lottie animation for delivery status
             if (_shouldShowAnimation(order['status'] ?? 'pending'))
               DeliveryStatusWidget(

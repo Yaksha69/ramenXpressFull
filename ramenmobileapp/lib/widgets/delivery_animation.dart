@@ -360,10 +360,7 @@ class DeliveryStatusWidget extends StatelessWidget {
   Widget _buildAnimationForOrderType(BuildContext context) {
     final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
     
-    if (isPickup && orderStatus.toLowerCase() == 'ready') {
-      // Show pickup animation for ready pickup orders
-      return _buildPickupAnimation(context);
-    } else if (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'outfordelivery')) {
+    if (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'outfordelivery')) {
       // Show delivery animation only for delivery orders when out for delivery
       return DeliveryAnimation(
         animationPath: lottieAnimationPath ?? 'assets/animations/delivery_guy.json',
@@ -372,7 +369,7 @@ class DeliveryStatusWidget extends StatelessWidget {
         height: 150,
       );
     } else {
-      // Show static icon for other states
+      // Show static icon for all other states including ready
       return Column(
         children: [
           _buildStatusIcon(context),
@@ -390,65 +387,10 @@ class DeliveryStatusWidget extends StatelessWidget {
     }
   }
 
-  Widget _buildPickupAnimation(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                Theme.of(context).colorScheme.primary.withOpacity(0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.store,
-                size: 60,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "🛍️",
-                style: const TextStyle(fontSize: 32),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          _getStatusMessage(),
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        Text(
-          "Your order is ready for pickup at our store!",
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey[600],
-            height: 1.5,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
 
   bool _shouldShowAnimation() {
     final isPickup = deliveryMethod?.toLowerCase() == 'pickup';
-    return (isPickup && orderStatus.toLowerCase() == 'ready') ||
-           (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'outfordelivery'));
+    return (!isPickup && (orderStatus.toLowerCase() == 'out for delivery' || orderStatus.toLowerCase() == 'outfordelivery'));
   }
 
   String _getStatusMessage() {
@@ -476,7 +418,9 @@ class DeliveryStatusWidget extends StatelessWidget {
         return Colors.orange;
       case 'ready':
         return Colors.blue;
+      case 'outfordelivery':
       case 'out for delivery':
+        return const Color.fromARGB(255, 255, 165, 0); 
       case 'on the way':
         return Colors.green;
       case 'delivered':

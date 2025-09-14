@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../widgets/delivery_animation.dart';
 import '../models/order.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
 
 class OrderTrackingPage extends StatefulWidget {
   final String orderId;
@@ -32,6 +33,17 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     } else {
       _isLoading = false;
     }
+    
+    // Set socket context for notifications
+    SocketService().setContext(context);
+    
+    // Set up socket listener for real-time updates
+    SocketService().onOrderStatusUpdate = (data) {
+      final orderId = data['orderId']?.toString();
+      if (orderId == widget.orderId && mounted) {
+        _loadOrderDetails();
+      }
+    };
     
     // Set up periodic refresh to get latest order status
     _startPeriodicRefresh();
@@ -224,19 +236,20 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
-            // Delivery Status with Animation
-            DeliveryStatusWidget(
-              orderStatus: _order!.status.name,
-              lottieAnimationPath: 'assets/animations/delivery_guy.json',
-              deliveryMethod: _order!.deliveryMethod,
-              orderDetails: {
-                'orderId': _order!.id,
-                'estimatedTime': _getEstimatedTime(),
-                'deliveryAddress': _order!.deliveryAddress,
-              },
-            ),
-            
-            const SizedBox(height: 16),
+            // Delivery Status with Animation - Hide when order is ready
+            if (_order!.status.name.toLowerCase() != 'ready') ...[
+              DeliveryStatusWidget(
+                orderStatus: _order!.status.name,
+                lottieAnimationPath: 'assets/animations/delivery_guy.json',
+                deliveryMethod: _order!.deliveryMethod,
+                orderDetails: {
+                  'orderId': _order!.id,
+                  'estimatedTime': _getEstimatedTime(),
+                  'deliveryAddress': _order!.deliveryAddress,
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
             
             // Order Progress Timeline
             _buildOrderTimeline(),
