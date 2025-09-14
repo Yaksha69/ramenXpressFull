@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
   
-    // Pie Chart for Order Types (dynamic from backend sales)
+    // Pie Chart for Order Types (dynamic from backend sales + mobile orders)
     const pieCtx = document.getElementById('pieChart');
     if (pieCtx) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -150,28 +150,78 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      fetch(`${getApiUrl()}/sales/sales-summary?period=week`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Calculate this week's date range
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // End of current week (Saturday)
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      // Fetch both POS sales and mobile orders
+      Promise.all([
+        fetch(`${getApiUrl()}/sales/sales-summary?period=week`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`${getApiUrl()}/mobile-orders/all`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ])
+      .then(([salesRes, mobileRes]) => {
+        if (!salesRes.ok) {
+          throw new Error(`Sales API Error: ${salesRes.status} - ${salesRes.statusText}`);
         }
+        if (!mobileRes.ok) {
+          throw new Error(`Mobile Orders API Error: ${mobileRes.status} - ${mobileRes.statusText}`);
+        }
+        return Promise.all([salesRes.json(), mobileRes.json()]);
       })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`API Error: ${res.status} - ${res.statusText}`);
+      .then(([salesData, mobileOrdersData]) => {
+        if (!salesData.sales || !Array.isArray(salesData.sales)) {
+          throw new Error('Invalid sales data format received from API');
         }
-        return res.json();
-      })
-      .then(data => {
-        if (!data.sales || !Array.isArray(data.sales)) {
-          throw new Error('Invalid data format received from API');
+        if (!Array.isArray(mobileOrdersData)) {
+          throw new Error('Invalid mobile orders data format received from API');
         }
+
+        // Filter mobile orders for this week
+        const thisWeekMobileOrders = mobileOrdersData.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          return orderDate >= startOfWeek && orderDate <= endOfWeek;
+        });
+
         const counts = { dineIn: 0, pickup: 0, delivery: 0 };
-        data.sales.forEach(s => {
+        
+        // Count POS sales
+        salesData.sales.forEach(s => {
           const t = (s.serviceType || '').toLowerCase();
           if (t === 'dine-in') counts.dineIn++;
           else if (t === 'pickup' || t === 'takeout') counts.pickup++;
         });
+
+        // Count mobile orders based on delivery method
+        thisWeekMobileOrders.forEach(order => {
+          const deliveryMethod = (order.deliveryMethod || '').toLowerCase();
+          if (deliveryMethod === 'delivery') {
+            counts.delivery++;
+          } else if (deliveryMethod === 'pickup' || deliveryMethod === 'pick-up') {
+            counts.pickup++;
+          }
+          // If deliveryMethod is not specified or is something else, default to pickup
+          else {
+            counts.pickup++;
+          }
+        });
+
+        console.log('Order type counts:', counts);
         buildPie(counts);
       })
       .catch(error => {
@@ -183,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
   
-    // Bar Chart for Product Sales (dynamic)
+    // Bar Chart for Product Sales (dynamic from POS sales + mobile orders)
     const barCtx = document.getElementById('barChart');
     if (barCtx) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -234,27 +284,105 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      fetch(`${getApiUrl()}/sales/product-sales?limit=10`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Calculate this week's date range
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6); // End of current week (Saturday)
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      // Fetch both POS sales and mobile orders
+      Promise.all([
+        fetch(`${getApiUrl()}/sales/product-sales?limit=10`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`${getApiUrl()}/mobile-orders/all`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ])
+      .then(([salesRes, mobileRes]) => {
+        if (!salesRes.ok) {
+          throw new Error(`Sales API Error: ${salesRes.status} - ${salesRes.statusText}`);
         }
+        if (!mobileRes.ok) {
+          throw new Error(`Mobile Orders API Error: ${mobileRes.status} - ${mobileRes.statusText}`);
+        }
+        return Promise.all([salesRes.json(), mobileRes.json()]);
       })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`API Error: ${res.status} - ${res.statusText}`);
+      .then(([posSalesData, mobileOrdersData]) => {
+        if (!Array.isArray(posSalesData)) {
+          throw new Error('Invalid POS sales data format received from API');
         }
-        return res.json();
-      })
-      .then(items => {
-        if (!Array.isArray(items)) {
-          throw new Error('Invalid data format received from API');
+        if (!Array.isArray(mobileOrdersData)) {
+          throw new Error('Invalid mobile orders data format received from API');
         }
-        if (items.length === 0) {
+
+        // Filter mobile orders for this week
+        const thisWeekMobileOrders = mobileOrdersData.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          return orderDate >= startOfWeek && orderDate <= endOfWeek;
+        });
+
+        // Process mobile orders to extract product sales
+        const mobileProductSales = {};
+        thisWeekMobileOrders.forEach(order => {
+          if (Array.isArray(order.items)) {
+            order.items.forEach(item => {
+              // Main item
+              if (item.menuItem && item.menuItem.name) {
+                const itemName = item.menuItem.name;
+                const quantity = item.quantity || 0;
+                mobileProductSales[itemName] = (mobileProductSales[itemName] || 0) + quantity;
+              }
+              // Add-ons
+              if (Array.isArray(item.selectedAddOns)) {
+                item.selectedAddOns.forEach(addOn => {
+                  const addOnName = addOn.name || 'Unknown Add-on';
+                  mobileProductSales[addOnName] = (mobileProductSales[addOnName] || 0) + 1;
+                });
+              }
+            });
+          }
+        });
+
+        // Combine POS sales and mobile orders
+        const combinedProductSales = {};
+        
+        // Add POS sales data
+        posSalesData.forEach(item => {
+          const name = item.name || 'Unknown';
+          const quantity = Number(item.totalQuantity) || 0;
+          combinedProductSales[name] = (combinedProductSales[name] || 0) + quantity;
+        });
+
+        // Add mobile orders data
+        Object.entries(mobileProductSales).forEach(([name, quantity]) => {
+          combinedProductSales[name] = (combinedProductSales[name] || 0) + quantity;
+        });
+
+        // Convert to arrays and sort by quantity
+        const sortedProducts = Object.entries(combinedProductSales)
+          .map(([name, quantity]) => ({ name, totalQuantity: quantity }))
+          .sort((a, b) => b.totalQuantity - a.totalQuantity)
+          .slice(0, 10); // Top 10 products
+
+        if (sortedProducts.length === 0) {
           throw new Error('No product sales data available');
         }
-        const labels = items.map(i => i.name || 'Unknown');
-        const data = items.map(i => Number(i.totalQuantity) || 0);
+
+        const labels = sortedProducts.map(item => item.name);
+        const data = sortedProducts.map(item => item.totalQuantity);
+        
+        console.log('Combined product sales:', sortedProducts);
         buildChart(labels, data);
       })
       .catch(error => {

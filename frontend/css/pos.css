@@ -127,25 +127,32 @@ transform: translateY(-5px);
 #menuItemsGrid .card img {
 height: 150px;
 width: 100%;
-object-fit: cover;
+object-fit: contain;
+background-color: #f8f9fa;
 border-radius: 0.375rem 0.375rem 0 0;
 }
 
 @media (max-width: 575.98px) {
 #menuItemsGrid .card img {
   height: 120px;
+  object-fit: contain;
+background-color: #f8f9fa;
 }
 }
 
 @media (min-width: 576px) and (max-width: 767.98px) {
 #menuItemsGrid .card img {
   height: 130px;
+  object-fit: contain;
+background-color: #f8f9fa;
 }
 }
 
 @media (min-width: 768px) and (max-width: 991.98px) {
 #menuItemsGrid .card img {
   height: 140px;
+  object-fit: contain;
+background-color: #f8f9fa;
 }
 }
 
@@ -389,7 +396,8 @@ transform: translateY(-5px);
 #menuItemsGrid .card img {
 height: 150px;
 width: 100%;
-object-fit: cover;
+object-fit: contain;
+background-color: #f8f9fa;
 border-radius: 0.375rem 0.375rem 0 0;
 }
 

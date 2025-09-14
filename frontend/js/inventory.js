@@ -87,6 +87,15 @@ function getImageUrl(imagePath) {
   
   // If it's just a filename (like uploaded images from backend), construct backend URL
   if (!imagePath.includes('/') && imagePath.includes('.')) {
+    // Check if it's a default image that might not exist in uploads
+    if (imagePath === 'default-ramen.jpg' || imagePath.startsWith('default-')) {
+      console.log('Default image detected, using database image instead');
+      // Use the specific image from the database
+      const databaseImage = '1756859309524-197330587-databaseDesign.jpg';
+      const backendUrl = `${getUploadUrl()}/uploads/menus/${databaseImage}`;
+      console.log('Using database image:', backendUrl);
+      return backendUrl;
+    }
     const backendUrl = `${getUploadUrl()}/uploads/menus/${imagePath}`;
     console.log('Constructed backend image URL:', backendUrl);
     return backendUrl;
@@ -961,7 +970,7 @@ function renderMenuTableWithPagination(menuItems = filteredMenuItems) {
       <tr>
         <td>
           <div class="d-flex align-items-center">
-            ${item.image ? `<img src="${getImageUrl(item.image)}" alt="${item.name}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.src='../assets/ramen1.jpg'">` : ''}
+            ${item.image ? `<img src="${getImageUrl(item.image)}" alt="${item.name}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.src='../assets/ramen1.jpg'">` : ''}
             <div>
               <div class="fw-bold">${item.name}</div>
               ${item.description ? `<small class="text-muted">${item.description}</small>` : ''}
@@ -1456,7 +1465,7 @@ async function viewMenuItem(id) {
                 <div class="col-md-4">
                   <div class="text-center mb-3">
                     ${menuItem.image ? 
-                      `<img src="${getImageUrl(menuItem.image)}" alt="${menuItem.name}" class="img-fluid rounded" style="max-height: 200px; object-fit: cover;" onerror="this.src='../assets/ramen1.jpg'">` : 
+                      `<img src="${getImageUrl(menuItem.image)}" alt="${menuItem.name}" class="img-fluid rounded" style="max-height: 200px; object-fit: contain;" onerror="this.src='../assets/ramen1.jpg'">` : 
                       `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
                         <i class="fas fa-utensils fa-3x text-muted"></i>
                       </div>`

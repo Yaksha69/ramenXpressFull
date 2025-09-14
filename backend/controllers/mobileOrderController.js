@@ -208,6 +208,24 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
     
+    // Update corresponding sales records status
+    try {
+      const salesRecords = await Sales.find({ 
+        mobileOrderId: updatedOrder._id 
+      });
+      
+      if (salesRecords.length > 0) {
+        await Sales.updateMany(
+          { mobileOrderId: updatedOrder._id },
+          { status: updatedOrder.status }
+        );
+        console.log(`📊 Updated ${salesRecords.length} sales records to status: ${updatedOrder.status}`);
+      }
+    } catch (salesUpdateError) {
+      console.error('Failed to update sales records status:', salesUpdateError);
+      // Don't fail the mobile order update if sales update fails
+    }
+    
     // Create notification for status update
     try {
       const customerName = updatedOrder.customerId?.firstName || 
@@ -288,6 +306,24 @@ exports.cancelMobileOrder = async (req, res) => {
       { status: 'cancelled' },
       { new: true }
     ).populate('customerId', 'firstName lastName name fullName phone');
+    
+    // Update corresponding sales records status to cancelled
+    try {
+      const salesRecords = await Sales.find({ 
+        mobileOrderId: updatedOrder._id 
+      });
+      
+      if (salesRecords.length > 0) {
+        await Sales.updateMany(
+          { mobileOrderId: updatedOrder._id },
+          { status: 'cancelled' }
+        );
+        console.log(`📊 Updated ${salesRecords.length} sales records to status: cancelled`);
+      }
+    } catch (salesUpdateError) {
+      console.error('Failed to update sales records status:', salesUpdateError);
+      // Don't fail the mobile order update if sales update fails
+    }
     
     // Emit socket.io event for real-time update
     const io = req.app.get('io');
