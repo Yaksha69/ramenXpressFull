@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     setupModals();
     updateCart();
+    handlePaymentRedirect();
     
     // Add test button for notifications (for development/testing)
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -279,6 +280,8 @@ function setupEventListeners() {
             paymentMethod = paymentMap[button.dataset.payment] || 'cash';
         });
     });
+
+    // Remove QR payment handlers from buttons - QR will be generated after order confirmation
 
     // Modal quantity controls
     const decreaseBtn = document.getElementById('decreaseQuantity');
@@ -913,10 +916,12 @@ function handleAddToCart() {
     if (!currentModalItem.canBeOrdered) {
         const outOfStockIngredients = currentModalItem.ingredientsWithStock.filter(ing => ing.isOutOfStock);
         if (outOfStockIngredients.length > 0) {
-            // Check if any out-of-stock ingredients are still selected (not removed)
-            const selectedIngredients = getSelectedIngredients();
+            // Get ingredients selected for removal
+            const selectedForRemoval = getSelectedIngredients();
+            
+            // Check if any out-of-stock ingredients are NOT removed (still needed for the dish)
             const stillSelectedOutOfStock = outOfStockIngredients.filter(ing => 
-                selectedIngredients.some(selected => selected.inventoryItem === ing.inventoryItem)
+                !selectedForRemoval.some(selected => selected.inventoryItem === ing.inventoryItem)
             );
             
             if (stillSelectedOutOfStock.length > 0) {
@@ -1033,13 +1038,13 @@ function handleCheckout() {
     }
 
     const orderTypeIcon = document.querySelector(`[data-order-type="${orderType === 'dine-in' ? 'Dine-in' : 'Takeout'}"] i`).className;
-    const paymentMethodIcon = document.querySelector(`[data-payment="${paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'gcash' ? 'GCash' : 'Maya'}"] i`).className;
+    const paymentMethodIcon = document.querySelector(`[data-payment="${paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'gcash' ? 'GCash' : paymentMethod === 'paymaya' ? 'Maya' : paymentMethod === 'gcash_qr' ? 'GCash' : 'Maya'}"] i`).className;
     const total = cartItems.reduce((sum, item) => sum + item.total, 0);
 
     document.getElementById('orderTypeIcon').className = orderTypeIcon;
     document.getElementById('orderTypeText').textContent = orderType === 'dine-in' ? 'Dine-in' : 'Takeout';
     document.getElementById('paymentMethodIcon').className = paymentMethodIcon;
-    document.getElementById('paymentMethodText').textContent = paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'gcash' ? 'GCash' : 'Maya';
+    document.getElementById('paymentMethodText').textContent = paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'gcash' ? 'GCash' : paymentMethod === 'paymaya' ? 'Maya' : paymentMethod === 'gcash_qr' ? 'GCash QR' : 'Maya QR';
     document.getElementById('paymentTotal').textContent = `₱${total.toFixed(2)}`;
 
     if (paymentModal) {
@@ -1049,6 +1054,24 @@ function handleCheckout() {
 
 // Handle Payment Confirm
 async function handlePaymentConfirm() {
+    try {
+        // Check if payment method requires QR code
+        if (paymentMethod === 'gcash' || paymentMethod === 'paymaya') {
+            // Generate QR code for payment (order will be processed after payment confirmation)
+            await generateQRCode(paymentMethod);
+            return;
+        }
+
+        // For cash payments, proceed with normal order processing
+        await processOrder();
+    } catch (error) {
+        console.error('Payment confirmation error:', error);
+        handleOrderError(error);
+    }
+}
+
+// Process Order (for cash payments)
+async function processOrder() {
     try {
         // Prepare all items for single order
         const items = cartItems.map(item => {
@@ -1104,74 +1127,479 @@ async function handlePaymentConfirm() {
 
     } catch (error) {
         console.error('Error processing order:', error);
-        console.error('Error status:', error.status);
-        console.error('Error data:', error.data);
+        handleOrderError(error);
+    }
+}
+
+// Handle Order Error
+function handleOrderError(error) {
+    console.error('Error status:', error.status);
+    console.error('Error data:', error.data);
+    
+    // Handle different types of errors with user-friendly messages
+    let errorTitle = 'Order Failed';
+    let errorMessage = 'Failed to process order. Please try again.';
+    let errorDetails = '';
+    
+    if (error.status === 401) {
+        errorTitle = 'Authentication Required';
+        errorMessage = 'Your session has expired. Please log in again.';
+    } else if (error.status === 400) {
+        errorTitle = 'Invalid Order';
         
-        // Handle different types of errors with user-friendly messages
-        let errorTitle = 'Order Failed';
-        let errorMessage = 'Failed to process order. Please try again.';
-        let errorDetails = '';
-        
-        if (error.status === 401) {
-            errorTitle = 'Authentication Required';
-            errorMessage = 'Your session has expired. Please log in again.';
-        } else if (error.status === 400) {
-            errorTitle = 'Invalid Order';
+        // Check if it's a stock-related error
+        if (error.data && error.data.message && error.data.message.includes('Some items failed to process')) {
+            errorMessage = 'Some items are out of stock:';
             
-            // Check if it's a stock-related error
-            if (error.data && error.data.message && error.data.message.includes('Some items failed to process')) {
-                errorMessage = 'Some items are out of stock:';
-                
-                // Parse the error details for stock issues
-                if (error.data.errors && Array.isArray(error.data.errors)) {
-                    const stockErrors = error.data.errors.filter(err => err.error && err.error.includes('Insufficient stock'));
-                    if (stockErrors.length > 0) {
-                        errorDetails = stockErrors.map(err => {
-                            // Extract ingredient name and stock info from error message
-                            const match = err.error.match(/Insufficient stock for (.+)\. Available: (\d+), Required: (\d+)/);
-                            if (match) {
-                                const [, ingredient, available, required] = match;
-                                return `• ${ingredient}: Need ${required}, but only ${available} available`;
-                            }
-                            return `• ${err.error}`;
-                        }).join('<br>');
-                    }
+            // Parse the error details for stock issues
+            if (error.data.errors && Array.isArray(error.data.errors)) {
+                const stockErrors = error.data.errors.filter(err => err.error && err.error.includes('Insufficient stock'));
+                if (stockErrors.length > 0) {
+                    errorDetails = stockErrors.map(err => {
+                        // Extract ingredient name and stock info from error message
+                        const match = err.error.match(/Insufficient stock for (.+)\. Available: (\d+), Required: (\d+)/);
+                        if (match) {
+                            const [, ingredient, available, required] = match;
+                            return `• ${ingredient}: Need ${required}, but only ${available} available`;
+                        }
+                        return `• ${err.error}`;
+                    }).join('<br>');
                 }
-            } else if (error.data && error.data.message && error.data.message.includes('Insufficient stock')) {
-                errorMessage = 'Some items are out of stock:';
-                
-                // Handle single error case
-                const match = error.data.message.match(/Insufficient stock for (.+)\. Available: (\d+), Required: (\d+)/);
-                if (match) {
-                    const [, ingredient, available, required] = match;
-                    errorDetails = `• ${ingredient}: Need ${required}, but only ${available} available`;
-                } else {
-                    errorDetails = `• ${error.data.message}`;
-                }
-            } else if (error.data && error.data.message) {
-                errorMessage = error.data.message;
-            } else {
-                errorMessage = 'Invalid order data. Please check your cart and try again.';
             }
-        } else if (error.status === 500) {
-            errorTitle = 'Server Error';
-            errorMessage = 'Something went wrong on our end. Please try again later.';
-        } else if (error.message && error.message.includes('Failed to fetch')) {
-            errorTitle = 'Connection Error';
-            errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+        } else if (error.data && error.data.message && error.data.message.includes('Insufficient stock')) {
+            errorMessage = 'Some items are out of stock:';
+            
+            // Handle single error case
+            const match = error.data.message.match(/Insufficient stock for (.+)\. Available: (\d+), Required: (\d+)/);
+            if (match) {
+                const [, ingredient, available, required] = match;
+                errorDetails = `• ${ingredient}: Need ${required}, but only ${available} available`;
+            } else {
+                errorDetails = `• ${error.data.message}`;
+            }
+        } else if (error.data && error.data.message) {
+            errorMessage = error.data.message;
+        } else {
+            errorMessage = 'Invalid order data. Please check your cart and try again.';
         }
+    } else if (error.status === 500) {
+        errorTitle = 'Server Error';
+        errorMessage = 'Something went wrong on our end. Please try again later.';
+    } else if (error.message && error.message.includes('Failed to fetch')) {
+        errorTitle = 'Connection Error';
+        errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+    }
 
-        // Show error with details if available
-        const errorHtml = errorDetails ? 
-            `<p>${errorMessage}</p><div class="text-start"><strong>Details:</strong><br>${errorDetails}</div>` : 
-            errorMessage;
+    // Show error with details if available
+    const errorHtml = errorDetails ? 
+        `<p>${errorMessage}</p><div class="text-start"><strong>Details:</strong><br>${errorDetails}</div>` : 
+        errorMessage;
 
+    Swal.fire({
+        icon: 'error',
+        title: errorTitle,
+        html: errorHtml,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#dc3545'
+    });
+}
+
+// QR Payment Functions
+let currentQRPayment = null;
+let paymentVerificationInterval = null;
+
+// Generate QR Code for payment
+async function generateQRCode(paymentMethod) {
+    try {
+        const total = cartItems.reduce((sum, item) => sum + item.total, 0);
+        const orderId = `POS-${Date.now()}`;
+        
+        // Show QR modal with loading state
+        showQRModal(paymentMethod, total);
+        
+        // Generate QR code via API
+        const response = await fetch(`${API_BASE_URL}/paymongo/pos/generate-qr`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`
+            },
+            body: JSON.stringify({
+                amount: total,
+                orderId: orderId,
+                paymentMethod: paymentMethod
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Store QR payment data
+            currentQRPayment = {
+                sourceId: result.data.sourceId,
+                amount: result.data.amount,
+                orderId: result.data.orderId,
+                paymentMethod: result.data.paymentMethod,
+                status: result.data.status,
+                qrCodeDataURL: result.data.qrCodeDataURL
+            };
+
+            // Display QR code
+            displayQRCode(result.data, paymentMethod);
+            
+            // Start payment verification polling
+            startPaymentVerification();
+            
+            // Close the payment confirmation modal since we're showing QR code
+            if (paymentModal) {
+                paymentModal.hide();
+            }
+        } else {
+            showQRError(result.message || 'Failed to generate QR code');
+        }
+    } catch (error) {
+        console.error('QR Code generation error:', error);
+        showQRError('Network error. Please check your connection and try again.');
+    }
+}
+
+// Show QR Modal with loading state
+function showQRModal(paymentMethod, amount) {
+    const modal = new bootstrap.Modal(document.getElementById('qrPaymentModal'));
+    
+    // Reset modal state
+    document.getElementById('qrLoadingState').classList.remove('d-none');
+    document.getElementById('qrCodeDisplay').classList.add('d-none');
+    document.getElementById('qrErrorState').classList.add('d-none');
+    
+    // Set payment method info
+    const methodNames = {
+        'gcash': 'GCash QR',
+        'paymaya': 'Maya QR'
+    };
+    
+    const appNames = {
+        'gcash': 'GCash',
+        'paymaya': 'Maya'
+    };
+    
+    document.getElementById('qrPaymentTitle').textContent = methodNames[paymentMethod];
+    document.getElementById('qrPaymentMethod').textContent = methodNames[paymentMethod];
+    document.getElementById('qrAppName').textContent = appNames[paymentMethod];
+    document.getElementById('qrPaymentAmount').textContent = `₱${amount.toFixed(2)}`;
+    
+    modal.show();
+}
+
+// Display QR Code
+function displayQRCode(data, paymentMethod) {
+    // Hide loading, show QR code
+    document.getElementById('qrLoadingState').classList.add('d-none');
+    document.getElementById('qrCodeDisplay').classList.remove('d-none');
+    
+    // Set QR code image and link
+    document.getElementById('qrCodeImage').src = data.qrCodeDataURL;
+    document.getElementById('qrCodeLink').href = data.redirectUrl;
+    
+    // Set payment URL
+    document.getElementById('paymentUrlDisplay').value = data.redirectUrl;
+    
+    // Set payment method icon
+    const iconMap = {
+        'gcash': '../assets/gcash_logo.png',
+        'paymaya': '../assets/paymaya_logo.png'
+    };
+    
+    const iconElement = document.getElementById('qrPaymentIcon');
+    iconElement.src = iconMap[paymentMethod] || '../assets/gcash_logo.png';
+    iconElement.alt = paymentMethod;
+    
+    // Setup URL buttons
+    setupUrlButtons();
+}
+
+// Setup URL buttons functionality
+function setupUrlButtons() {
+    const copyBtn = document.getElementById('copyUrlBtn');
+    const openBtn = document.getElementById('openUrlBtn');
+    const urlInput = document.getElementById('paymentUrlDisplay');
+    
+    // Copy URL button
+    copyBtn.addEventListener('click', function() {
+        urlInput.select();
+        urlInput.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            document.execCommand('copy');
+            // Show success feedback
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check text-success"></i>';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy URL:', err);
+            alert('Failed to copy URL. Please select and copy manually.');
+        }
+    });
+    
+    // Open URL button
+    openBtn.addEventListener('click', function() {
+        const url = urlInput.value;
+        if (url) {
+            window.open(url, '_blank');
+        }
+    });
+}
+
+// Show QR Error
+function showQRError(message) {
+    document.getElementById('qrLoadingState').classList.add('d-none');
+    document.getElementById('qrCodeDisplay').classList.add('d-none');
+    document.getElementById('qrErrorState').classList.remove('d-none');
+    
+    document.getElementById('qrErrorMessage').textContent = message;
+}
+
+// Start payment verification polling
+function startPaymentVerification() {
+    if (paymentVerificationInterval) {
+        clearInterval(paymentVerificationInterval);
+    }
+    
+    paymentVerificationInterval = setInterval(async () => {
+        if (currentQRPayment) {
+            await verifyPayment();
+        }
+    }, 3000); // Check every 3 seconds
+}
+
+// Verify payment status
+async function verifyPayment() {
+    if (!currentQRPayment) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/paymongo/pos/verify-payment/${currentQRPayment.sourceId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`
+            }
+        });
+
+        const result = await response.json();
+        console.log('Payment verification result:', result);
+
+        if (result.success && result.data) {
+            const paymentData = result.data;
+            console.log('Payment data:', paymentData);
+            
+            // Check payment status (backend returns status directly in data.status)
+            if (paymentData.status === 'paid') {
+                // Payment successful
+                clearInterval(paymentVerificationInterval);
+                paymentVerificationInterval = null;
+                
+                // Update payment status display
+                updatePaymentStatus('success', 'Payment successful!');
+                
+                // Process the order
+                await processQRPayment();
+                
+            } else if (paymentData.status === 'failed') {
+                // Payment failed
+                clearInterval(paymentVerificationInterval);
+                paymentVerificationInterval = null;
+                
+                updatePaymentStatus('error', 'Payment failed. Please try again.');
+            } else if (paymentData.status === 'pending') {
+                // Payment still pending (waiting for customer to pay), continue polling
+                console.log(`Payment status: ${paymentData.status} - waiting for customer to pay...`);
+            } else if (paymentData.status === 'chargeable') {
+                // Payment is chargeable, attempt to charge it
+                console.log(`Payment status: ${paymentData.status} - charging payment...`);
+                await chargePayment();
+            } else {
+                console.log('Unknown payment status:', paymentData.status);
+                // For unknown statuses, continue polling but log them
+                console.log('Continuing to poll for payment status...');
+            }
+        } else {
+            console.log('Payment verification failed:', result);
+        }
+    } catch (error) {
+        console.error('Payment verification error:', error);
+    }
+}
+
+// Update payment status display
+function updatePaymentStatus(type, message) {
+    const statusElement = document.getElementById('paymentStatus');
+    
+    if (type === 'success') {
+        statusElement.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center text-success">
+                <i class="fas fa-check-circle me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+    } else if (type === 'error') {
+        statusElement.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center text-danger">
+                <i class="fas fa-times-circle me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+    }
+}
+
+// Process QR Payment (create order after payment confirmation)
+async function processQRPayment() {
+    try {
+        // Set payment method for order processing
+        paymentMethod = currentQRPayment.paymentMethod === 'gcash' ? 'gcash_qr' : 'paymaya_qr';
+        
+        // Process the order using the new processOrder function
+        await processOrder();
+        
+        // Close QR modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('qrPaymentModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Reset QR payment data
+        currentQRPayment = null;
+        
+    } catch (error) {
+        console.error('QR Payment processing error:', error);
         Swal.fire({
             icon: 'error',
-            title: errorTitle,
-            html: errorHtml,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#dc3545'
+            title: 'Payment Processing Error',
+            text: 'Payment was successful but order processing failed. Please contact support.',
+            confirmButtonText: 'OK'
         });
+    }
+}
+
+// Manual payment verification (button click)
+async function verifyPaymentManually() {
+    if (!currentQRPayment) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Payment',
+            text: 'No QR payment in progress.'
+        });
+        return;
+    }
+    
+    await verifyPayment();
+}
+
+// Charge a chargeable payment
+async function chargePayment() {
+    if (!currentQRPayment) {
+        console.error('No current QR payment to charge');
+        return;
+    }
+
+    try {
+        console.log(`💳 Charging payment: ${currentQRPayment.sourceId} for ₱${currentQRPayment.amount}`);
+        
+        const response = await fetch(`${API_BASE_URL}/paymongo/pos/charge-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`
+            },
+            body: JSON.stringify({
+                sourceId: currentQRPayment.sourceId,
+                amount: currentQRPayment.amount
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('✅ Payment charged successfully:', result.data);
+            
+            // Update payment status
+            updatePaymentStatus('success', 'Payment successful!');
+            
+            // Clear verification interval
+            if (paymentVerificationInterval) {
+                clearInterval(paymentVerificationInterval);
+                paymentVerificationInterval = null;
+            }
+            
+            // Process the order
+            await processQRPayment();
+            
+        } else {
+            console.error('❌ Payment charging failed:', result.message);
+            updatePaymentStatus('error', 'Failed to charge payment. Please try again.');
+        }
+    } catch (error) {
+        console.error('❌ Payment charging error:', error);
+        updatePaymentStatus('error', 'Payment charging failed. Please try again.');
+    }
+}
+
+// Handle payment redirect from PayMongo
+function handlePaymentRedirect() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    
+    if (paymentStatus === 'success') {
+        console.log('✅ Payment successful redirect detected');
+        
+        // If we have a current QR payment, verify it immediately
+        if (currentQRPayment) {
+            console.log('Verifying payment immediately after redirect...');
+            verifyPayment().then(() => {
+                // Show success message after verification
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Payment Successful!',
+                    text: 'Your payment has been processed successfully.',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            });
+        } else {
+            // Show success message even if no current payment
+            Swal.fire({
+                icon: 'success',
+                title: 'Payment Successful!',
+                text: 'Your payment has been processed successfully.',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        }
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+    } else if (paymentStatus === 'failed') {
+        console.log('❌ Payment failed redirect detected');
+        // Show error message
+        Swal.fire({
+            icon: 'error',
+            title: 'Payment Failed',
+            text: 'Your payment could not be processed. Please try again.',
+            timer: 3000,
+            showConfirmButton: false
+        });
+        
+        // Close QR modal if open
+        const qrModal = document.getElementById('qrPaymentModal');
+        if (qrModal) {
+            const modal = bootstrap.Modal.getInstance(qrModal);
+            if (modal) {
+                modal.hide();
+            }
+        }
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 } 

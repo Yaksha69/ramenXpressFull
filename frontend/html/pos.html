@@ -152,11 +152,11 @@
                       <i class="fas fa-money-bill mb-1"></i>
                       <div class="small">Cash</div>
                     </button>
-                    <button class="btn btn-outline-danger flex-grow-1" data-payment="GCash">
+                    <button class="btn btn-outline-danger flex-grow-1" data-payment="GCash" id="gcashBtn">
                       <i class="fas fa-mobile-alt mb-1"></i>
                       <div class="small">GCash</div>
                     </button>
-                    <button class="btn btn-outline-danger flex-grow-1" data-payment="Maya">
+                    <button class="btn btn-outline-danger flex-grow-1" data-payment="Maya" id="mayaBtn">
                       <i class="fas fa-credit-card mb-1"></i>
                       <div class="small">Maya</div>
                     </button>
@@ -291,6 +291,95 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-danger" id="confirmOrderBtn">Confirm Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Payment Modal -->
+  <div class="modal fade" id="qrPaymentModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-qrcode me-2"></i>
+            <span id="qrPaymentTitle">QR Payment</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" tabindex="-1"></button>
+        </div>
+        <div class="modal-body text-center">
+          <!-- Loading State -->
+          <div id="qrLoadingState" class="d-none">
+            <div class="spinner-border text-primary mb-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Generating QR code...</p>
+          </div>
+
+          <!-- QR Code Display -->
+          <div id="qrCodeDisplay" class="d-none">
+            <div class="mb-3">
+              <div class="d-flex justify-content-center align-items-center mb-2">
+                <img id="qrPaymentIcon" src="" alt="" class="me-2" style="width: 24px; height: 24px;">
+                <span class="fw-bold" id="qrPaymentMethod">GCash QR</span>
+              </div>
+              <h4 class="text-danger mb-3" id="qrPaymentAmount">₱0.00</h4>
+            </div>
+            
+            <div class="bg-light p-4 rounded mb-3">
+              <a id="qrCodeLink" href="#" target="_blank" title="Click to open payment page">
+                <img id="qrCodeImage" src="" alt="QR Code" class="img-fluid" style="max-width: 300px; cursor: pointer;">
+              </a>
+            </div>
+            
+            <!-- Payment URL Display -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">
+                <i class="fas fa-link me-2"></i>Payment URL:
+              </label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="paymentUrlDisplay" readonly>
+                <button class="btn btn-outline-secondary" type="button" id="copyUrlBtn" title="Copy URL">
+                  <i class="fas fa-copy"></i>
+                </button>
+                <button class="btn btn-outline-primary" type="button" id="openUrlBtn" title="Open URL">
+                  <i class="fas fa-external-link-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Instructions:</strong> Scan this QR code with your <span id="qrAppName">GCash</span> app to complete the payment. The order will be processed automatically once payment is confirmed.
+            </div>
+
+            <!-- Payment Status -->
+            <div id="paymentStatus" class="mt-3">
+              <div class="d-flex justify-content-center align-items-center">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                  <span class="visually-hidden">Checking...</span>
+                </div>
+                <span class="text-muted">Waiting for payment...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error State -->
+          <div id="qrErrorState" class="d-none">
+            <div class="alert alert-danger">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <span id="qrErrorMessage">Failed to generate QR code. Please try again.</span>
+            </div>
+            <button class="btn btn-primary" onclick="generateQRCode()">
+              <i class="fas fa-redo me-2"></i>Retry
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel Payment</button>
+          <button type="button" class="btn btn-primary" id="verifyPaymentBtn" onclick="verifyPaymentManually()">
+            <i class="fas fa-check me-2"></i>Verify Payment
+          </button>
         </div>
       </div>
     </div>

@@ -61,7 +61,7 @@ const salesSchema = new mongoose.Schema({
     }],
     paymentMethod: {
         type: String,
-        enum: ['cash', 'paymaya', 'gcash'],
+        enum: ['cash', 'paymaya', 'gcash', 'gcash_qr', 'paymaya_qr'],
         required: true
     },
     serviceType: {
@@ -157,11 +157,33 @@ const salesSchema = new mongoose.Schema({
             type: Number,
             required: true
         }
-    }]
+    }],
+    // PayMongo QR payment fields
+    paymongoSourceId: {
+        type: String,
+        required: false
+    },
+    paymongoStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'cancelled'],
+        required: false
+    },
+    qrCodeGenerated: {
+        type: Date,
+        required: false
+    }
+}, {
+    timestamps: true
 });
 
 // Add compound index to ensure orderID + menuItem combination is unique
 // This prevents duplicate items in the same order while allowing multiple items per order
 salesSchema.index({ orderID: 1, menuItem: 1 }, { unique: true });
+
+// Index for better query performance
+salesSchema.index({ orderID: 1 });
+salesSchema.index({ paymentMethod: 1 });
+salesSchema.index({ paymongoSourceId: 1 });
+salesSchema.index({ date: -1 });
 
 module.exports = mongoose.model('Sales', salesSchema);

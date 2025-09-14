@@ -1109,3 +1109,38 @@ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
+
+/* QR Payment Styles */
+
+/* QR Modal Styles */
+#qrPaymentModal .modal-dialog {
+  max-width: 500px;
+}
+
+#qrCodeImage {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+}
+
+#qrPaymentIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Payment Status Styles */
+#paymentStatus .text-success {
+  color: #198754 !important;
+}
+
+#paymentStatus .text-danger {
+  color: #dc3545 !important;
+}
+
+/* QR Loading Animation */
+#qrLoadingState .spinner-border {
+  width: 3rem;
+  height: 3rem;
+}

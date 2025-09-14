@@ -20,6 +20,7 @@ const otpRoutes = require('./routes/otpRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const kitchenRoutes = require('./routes/kitchenRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const paymongoRoutes = require('./routes/paymongoRoutes');
 
 
 const app = express();
@@ -64,6 +65,7 @@ app.use(mapper + 'otp', otpRoutes);
 app.use(mapper + 'reviews', reviewRoutes);
 app.use(mapper + 'kitchen', kitchenRoutes);
 app.use(mapper + 'notifications', notificationRoutes);
+app.use(mapper + 'paymongo', paymongoRoutes);
 app.use('/uploads/menus', express.static(path.join(__dirname, 'uploads/menus')));
 
 // MongoDB connection with retry mechanism
@@ -134,12 +136,13 @@ app.get('/health', (req, res) => {
     status: 'OK',
     message: 'RamenXpress API is running',
     timestamp: new Date().toISOString(),
-    environment: {
-      NODE_ENV: process.env.NODE_ENV || 'not set',
-      PORT: process.env.PORT || 'not set',
-      MONGO_URI: process.env.MONGO_URI ? 'set' : 'not set',
-      JWT_SECRET: process.env.JWT_SECRET ? 'set' : 'not set'
-    },
+      environment: {
+        NODE_ENV: process.env.NODE_ENV || 'not set',
+        PORT: process.env.PORT || 'not set',
+        MONGO_URI: process.env.MONGO_URI ? 'set' : 'not set',
+        JWT_SECRET: process.env.JWT_SECRET ? 'set' : 'not set',
+        PAYMONGO_SECRET_KEY: process.env.PAYMONGO_SECRET_KEY ? 'set' : 'not set'
+      },
     database: 'checking...'
   };
   
@@ -213,7 +216,8 @@ app.get('/test-mongo', (req, res) => {
 });
 
 server.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-    console.log(`Health check available at http://localhost:${port}/health`);
+    console.log(`🚀 Server is running on port ${port}`);
+    console.log(`🏥 Health check available at http://localhost:${port}/health`);
+    console.log(`💰 PayMongo QR payments enabled for POS`);
 });
 
