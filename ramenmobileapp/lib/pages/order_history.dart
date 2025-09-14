@@ -127,11 +127,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
   }
 
   Widget _buildMenuItemImageWithName(String imagePath, String itemName, {double? width, double? height}) {
-    print('🖼️ ORDER HISTORY DEBUG:');
-    print('  Original path: "$imagePath"');
-    print('  Item name: "$itemName"');
+    final imageUrl = ApiService.getImageUrl(imagePath);
     
-    // Try multiple image loading strategies
     return Container(
       width: width ?? 50,
       height: height ?? 50,
@@ -141,135 +138,58 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: _buildImageWithFallbacks(imagePath, itemName, width: width, height: height),
+        child: ApiService.isNetworkImage(imagePath)
+            ? Image.network(
+                imageUrl,
+                width: width,
+                height: height,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: width ?? 50,
+                    height: height ?? 50,
+                    color: Colors.grey[200],
+                    child: Icon(
+                      Icons.restaurant,
+                      color: Colors.grey[400],
+                      size: 24,
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) {
+                    return child;
+                  }
+                  return Container(
+                    width: width ?? 50,
+                    height: height ?? 50,
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
+              )
+            : Image.asset(
+                imageUrl,
+                width: width,
+                height: height,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: width ?? 50,
+                    height: height ?? 50,
+                    color: Colors.grey[200],
+                    child: Icon(
+                      Icons.restaurant,
+                      color: Colors.grey[400],
+                      size: 24,
+                    ),
+                  );
+                },
+              ),
       ),
     );
-  }
-
-  Widget _buildImageWithFallbacks(String imagePath, String itemName, {double? width, double? height}) {
-    // If we have an image path from the database, use it
-    if (imagePath.isNotEmpty) {
-      final baseUrl = ApiService.baseUrl.replaceAll('/api/v1', '');
-      final imageUrl = '$baseUrl/uploads/menus/$imagePath';
-      
-      print('  Loading stored image: $imageUrl');
-      
-      return Image.network(
-        imageUrl,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          print('🔴 Stored image failed: $imageUrl');
-          print('🔴 Error: $error');
-          return _loadMenuItemFromAPI(itemName, width: width, height: height);
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) {
-            print('✅ Stored image loaded successfully: $imageUrl');
-            return child;
-          }
-          return Container(
-            width: width ?? 50,
-            height: height ?? 50,
-            color: Colors.grey[200],
-            child: const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        },
-      );
-    }
-    
-    // If no image path in database, try to get from API
-    return _loadMenuItemFromAPI(itemName, width: width, height: height);
-  }
-
-  Widget _loadMenuItemFromAPI(String itemName, {double? width, double? height}) {
-    print('  Fetching menu item from API for: $itemName');
-    
-    return FutureBuilder<String?>(
-      future: _getMenuItemImage(itemName),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            width: width ?? 50,
-            height: height ?? 50,
-            color: Colors.grey[200],
-            child: const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        }
-        
-        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-          final baseUrl = ApiService.baseUrl.replaceAll('/api/v1', '');
-          final imageUrl = '$baseUrl/uploads/menus/${snapshot.data}';
-          
-          print('  Loading API image: $imageUrl');
-          
-          return Image.network(
-            imageUrl,
-            width: width,
-            height: height,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              print('🔴 API image failed: $imageUrl');
-              return Container(
-                width: width ?? 50,
-                height: height ?? 50,
-                color: Colors.grey[200],
-                child: Icon(
-                  Icons.restaurant,
-                  color: Colors.grey[400],
-                  size: 24,
-                ),
-              );
-            },
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) {
-                print('✅ API image loaded successfully: $imageUrl');
-                return child;
-              }
-              return Container(
-                width: width ?? 50,
-                height: height ?? 50,
-                color: Colors.grey[200],
-                child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            },
-          );
-        }
-        
-        // No image found, show placeholder
-        return Container(
-          width: width ?? 50,
-          height: height ?? 50,
-          color: Colors.grey[200],
-          child: Icon(
-            Icons.restaurant,
-            color: Colors.grey[400],
-            size: 24,
-          ),
-        );
-      },
-    );
-  }
-
-  Future<String?> _getMenuItemImage(String itemName) async {
-    try {
-      final allMenuItems = await ApiService().getMenuItems();
-      final matchingItem = allMenuItems.firstWhere(
-        (item) => item.name.toLowerCase() == itemName.toLowerCase(),
-        orElse: () => throw Exception('Menu item not found'),
-      );
-      return matchingItem.image;
-    } catch (e) {
-      print('🔴 Error fetching menu item image: $e');
-      return null;
-    }
   }
 
   @override
@@ -278,20 +198,29 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
     final dateFormat = DateFormat('MMM d, yyyy h:mm a');
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       body: RefreshIndicator(
         onRefresh: _refreshOrders,
+        color: const Color(0xFFD32D43),
         child: CustomScrollView(
         slivers: [
           SliverAppBar(
             automaticallyImplyLeading: false,
             floating: true,
             pinned: true,
-            expandedHeight: 180,
+            expandedHeight: 200,
             backgroundColor: Colors.white,
+            elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.only(top: 60, left: 16, right: 16),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFD32D43), Color(0xFFE85A4F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                padding: const EdgeInsets.only(top: 60, left: 20, right: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -300,41 +229,68 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
                         const Text(
                           'Order History',
                           style: TextStyle(
-                            color: Color(0xFF1A1A1A),
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
                           ),
                         ),
                         const Spacer(),
-                        CircleAvatar(
-                          backgroundImage: AssetImage('assets/adminPIC.png'),
-                          radius: 20,
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          child: const CircleAvatar(
+                            backgroundImage: AssetImage('assets/adminPIC.png'),
+                            radius: 22,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Track your delicious journey',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     // Modern Tab Bar
                     Container(
-                      height: 40,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(25),
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
                       ),
                       child: TabBar(
                         controller: _tabController,
                         isScrollable: true,
                         indicator: BoxDecoration(
-                          color: const Color(0xFFD32D43),
-                          borderRadius: BorderRadius.circular(25),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.grey[600],
+                        labelColor: const Color(0xFFD32D43),
+                        unselectedLabelColor: Colors.white.withOpacity(0.8),
                         labelStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
                         ),
                         unselectedLabelStyle: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                         tabs: _tabLabels.map((label) => Tab(
@@ -352,56 +308,83 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
           ),
           SliverToBoxAdapter(
             child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(),
+                ? const Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFD32D43),
+                      ),
+                    ),
                   )
                 : filteredOrders.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/logo.png',
-                              height: 100,
-                              opacity: const AlwaysStoppedAnimation(0.5),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              _selectedTabIndex == 0 ? 'No orders yet' : 'No ${_tabLabels[_selectedTabIndex].toLowerCase()} orders',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A1A),
+                    ? Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(60),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06),
+                                      spreadRadius: 0,
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Image.asset(
+                                  'assets/logo.png',
+                                  height: 60,
+                                  opacity: const AlwaysStoppedAnimation(0.7),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _selectedTabIndex == 0 
-                                ? 'Your order history will appear here'
-                                : 'No orders found for this status',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF1A1A1A),
+                              const SizedBox(height: 32),
+                              Text(
+                                _selectedTabIndex == 0 ? 'No orders yet' : 'No ${_tabLabels[_selectedTabIndex].toLowerCase()} orders',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1A1A1A),
+                                  letterSpacing: -0.3,
+                                ),
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 32),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                _selectedTabIndex == 0 
+                                  ? 'Your order history will appear here'
+                                  : 'No orders found for this status',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
                         ),
                       )
                     : Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(20.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+                              padding: const EdgeInsets.fromLTRB(0, 20, 0, 16),
                               child: Text(
                                 _selectedTabIndex == 0 ? 'All Orders' : '${_tabLabels[_selectedTabIndex]} Orders',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
                                   color: Color(0xFF1A1A1A),
+                                  letterSpacing: -0.3,
                                 ),
                               ),
                             ),
@@ -410,14 +393,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
                                   ? order.id.substring(order.id.length - 4)
                                   : order.id.padLeft(4, '0');
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 16),
+                                margin: const EdgeInsets.only(bottom: 20),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(24),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.08),
-                                      blurRadius: 20,
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 16,
                                       offset: const Offset(0, 4),
                                       spreadRadius: 0,
                                     ),
@@ -426,7 +409,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
                                 child: Material(
                                   color: Colors.transparent,
                                   child: InkWell(
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(24),
                                     onTap: () {
                                       Navigator.push(
                                         context,
@@ -436,7 +419,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
                                       );
                                     },
                                     child: Padding(
-                                      padding: const EdgeInsets.all(20),
+                                      padding: const EdgeInsets.all(24),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
@@ -629,45 +612,68 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with WidgetsBinding
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 10),
-              spreadRadius: 1,
-              blurRadius: 10,
-              offset: const Offset(0, -1),
+              color: Colors.black.withOpacity(0.08),
+              spreadRadius: 0,
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: 2, // History is selected
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                Navigator.pushReplacementNamed(context, '/home');
-                break;
-              case 1:
-                Navigator.pushReplacementNamed(context, '/payment');
-                break;
-              case 2:
-                // Already on order history page
-                break;
-              case 3:
-                Navigator.pushReplacementNamed(context, '/profile');
-                break;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-          ],
-          selectedItemColor: Color(0xFFD32D43),
-          unselectedItemColor: Color(0xFF1A1A1A),
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor: Colors.white,
-          type: BottomNavigationBarType.fixed,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: BottomNavigationBar(
+              currentIndex: 2, // History is selected
+              onTap: (index) {
+                switch (index) {
+                  case 0:
+                    Navigator.pushReplacementNamed(context, '/home');
+                    break;
+                  case 1:
+                    Navigator.pushReplacementNamed(context, '/payment');
+                    break;
+                  case 2:
+                    // Already on order history page
+                    break;
+                  case 3:
+                    Navigator.pushReplacementNamed(context, '/profile');
+                    break;
+                }
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: '',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.shopping_cart_outlined),
+                  activeIcon: Icon(Icons.shopping_cart),
+                  label: '',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history_outlined),
+                  activeIcon: Icon(Icons.history),
+                  label: '',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: '',
+                ),
+              ],
+              selectedItemColor: const Color(0xFFD32D43),
+              unselectedItemColor: Colors.grey[400],
+              showSelectedLabels: false,
+              showUnselectedLabels: false,
+              backgroundColor: Colors.transparent,
+              type: BottomNavigationBarType.fixed,
+              elevation: 0,
+            ),
+          ),
         ),
       ),
     );

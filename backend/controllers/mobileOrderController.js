@@ -31,7 +31,8 @@ exports.createMobileOrder = async (req, res) => {
       return res.status(400).json({ message: 'Payment method is required' });
     }
 
-    // Validate each item
+    // Validate and enrich each item with complete menu data
+    const enrichedItems = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (!item.menuItem || !item.menuItem.id || !item.menuItem.name || item.menuItem.price === undefined) {
@@ -44,10 +45,38 @@ exports.createMobileOrder = async (req, res) => {
           message: `Item ${i + 1} has invalid quantity` 
         });
       }
+
+      // Fetch complete menu item data to ensure we have the image
+      let completeMenuItem;
+      try {
+        completeMenuItem = await Menu.findById(item.menuItem.id);
+      } catch (error) {
+        // If ObjectId casting fails, try finding by name as fallback
+        console.log(`ObjectId casting failed for ID: ${item.menuItem.id}, trying name lookup`);
+        completeMenuItem = await Menu.findOne({ name: item.menuItem.name });
+      }
+      
+      if (!completeMenuItem) {
+        return res.status(400).json({ 
+          message: `Menu item with ID ${item.menuItem.id} or name "${item.menuItem.name}" not found` 
+        });
+      }
+
+      // Create enriched item with complete menu data including image
+      const enrichedItem = {
+        ...item,
+        menuItem: {
+          id: completeMenuItem._id.toString(),
+          name: completeMenuItem.name,
+          price: completeMenuItem.price,
+          image: completeMenuItem.image
+        }
+      };
+      enrichedItems.push(enrichedItem);
     }
 
-    // Calculate total
-    const subtotal = items.reduce((sum, item) => {
+    // Calculate total using enriched items
+    const subtotal = enrichedItems.reduce((sum, item) => {
       const addOnsPrice = item.selectedAddOns.reduce((addOnSum, addOn) => addOnSum + addOn.price, 0);
       return sum + ((item.menuItem.price + addOnsPrice) * item.quantity);
     }, 0);
@@ -61,7 +90,7 @@ exports.createMobileOrder = async (req, res) => {
 
     const mobileOrder = new MobileOrder({
       orderId,
-      items,
+      items: enrichedItems,
       total,
       deliveryMethod,
       deliveryAddress,

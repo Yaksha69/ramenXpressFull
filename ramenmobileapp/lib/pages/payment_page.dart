@@ -586,6 +586,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
         body: Center(
           child: CircularProgressIndicator(
             color: Color(0xFFD32D43),
@@ -596,6 +597,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
     if (cartItems.isEmpty) {
       return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
         bottomNavigationBar: _buildBottomNavBar(),
         body: CustomScrollView(
           slivers: [
@@ -605,39 +607,88 @@ class _PaymentPageState extends State<PaymentPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/logo.png',
-                      height: 100,
-                      opacity: const AlwaysStoppedAnimation(0.5),
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(60),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        height: 60,
+                        opacity: const AlwaysStoppedAnimation(0.7),
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     const Text(
                       'Your cart is empty',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A1A),
+                        letterSpacing: -0.3,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    const SizedBox(height: 12),
+                    Text(
                       'Looks like you haven\'t added anything to your cart yet',
                       textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: () =>
-                          Navigator.pushReplacementNamed(context, '/home'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD32D43),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 32,
+                    const SizedBox(height: 40),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD32D43), Color(0xFFE85A4F)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFD32D43).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () =>
+                            Navigator.pushReplacementNamed(context, '/home'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 32,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          'Start Shopping',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
                         ),
                       ),
-                      child: const Text('Start Shopping'),
                     ),
                   ],
                 ),
@@ -649,13 +700,14 @@ class _PaymentPageState extends State<PaymentPage> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       bottomNavigationBar: _buildBottomNavBar(),
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -678,13 +730,13 @@ class _PaymentPageState extends State<PaymentPage> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey,
-                          spreadRadius: 1,
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          color: Colors.black.withOpacity(0.06),
+                          spreadRadius: 0,
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -1438,16 +1490,16 @@ class _PaymentPageState extends State<PaymentPage> {
     double itemTotal = (price * int.parse(quantity)) + (addonsTotal * int.parse(quantity));
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromARGB(255, 156, 156, 156),
-            spreadRadius: 1,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            spreadRadius: 0,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1461,18 +1513,11 @@ class _PaymentPageState extends State<PaymentPage> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color.fromARGB(255, 149, 149, 149),
-                        spreadRadius: 1,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.grey[50],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     child: _buildItemImage(image),
                   ),
                 ),
@@ -1484,9 +1529,10 @@ class _PaymentPageState extends State<PaymentPage> {
                       Text(
                         name,
                         style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                           color: Color(0xFF1A1A1A),
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1502,15 +1548,15 @@ class _PaymentPageState extends State<PaymentPage> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF6F0EE),
-                          borderRadius: BorderRadius.circular(20),
+                          color: const Color(0xFFD32D43).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           'Qty: $quantity',
                           style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF1A1A1A),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFD32D43),
                           ),
                         ),
                       ),
@@ -1535,15 +1581,27 @@ class _PaymentPageState extends State<PaymentPage> {
                         GestureDetector(
                           onTap: onRemove,
                           child: Container(
-                            padding: const EdgeInsets.all(6),
+                            width: 32,
+                            height: 32,
                             decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 255, 235, 235),
-                              borderRadius: BorderRadius.circular(8),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFD32D43), Color(0xFFE85A4F)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFD32D43).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: const Icon(
-                              Icons.edit_outlined,
-                              size: 18,
-                              color: Color(0xFFD32D43),
+                              Icons.edit,
+                              size: 16,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -1669,30 +1727,74 @@ class _PaymentPageState extends State<PaymentPage> {
   Widget _buildAppBar() {
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      floating: true,
+      floating: false,
       pinned: true,
       expandedHeight: 120,
       backgroundColor: Colors.white,
+      elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.only(top: 60, left: 16, right: 16),
-          child: Row(
-            children: [
-              const Text(
-                'Payment',
-                style: TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFD32D43),
+                Color(0xFFE85A4F),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Text(
+                        'Payment',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(2),
+                        child: const CircleAvatar(
+                          backgroundImage: AssetImage('assets/adminPIC.png'),
+                          radius: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Review your order and complete payment',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              CircleAvatar(
-                backgroundImage: AssetImage('assets/adminPIC.png'),
-                radius: 20,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1703,45 +1805,68 @@ class _PaymentPageState extends State<PaymentPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 10),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, -1),
+            color: Colors.black.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 20,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
-      child: BottomNavigationBar(
-        currentIndex: 1,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushNamed(context, '/home');
-              break;
-            case 1:
-              // Already on payment page
-              break;
-            case 2:
-              Navigator.pushNamed(context, '/order-history');
-              break;
-            case 3:
-              Navigator.pushNamed(context, '/profile');
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-        ],
-        selectedItemColor: Color(0xFFD32D43),
-        unselectedItemColor: Color(0xFF1A1A1A),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        backgroundColor: Colors.white,
-        type: BottomNavigationBarType.fixed,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: BottomNavigationBar(
+            currentIndex: 1,
+            onTap: (index) {
+              switch (index) {
+                case 0:
+                  Navigator.pushReplacementNamed(context, '/home');
+                  break;
+                case 1:
+                  // Already on payment page
+                  break;
+                case 2:
+                  Navigator.pushNamed(context, '/order-history');
+                  break;
+                case 3:
+                  Navigator.pushNamed(context, '/profile');
+                  break;
+              }
+            },
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.shopping_cart_outlined),
+                activeIcon: Icon(Icons.shopping_cart),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.history_outlined),
+                activeIcon: Icon(Icons.history),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: '',
+              ),
+            ],
+            selectedItemColor: const Color(0xFFD32D43),
+            unselectedItemColor: Colors.grey[400],
+            showSelectedLabels: false,
+            showUnselectedLabels: false,
+            backgroundColor: Colors.transparent,
+            type: BottomNavigationBarType.fixed,
+            elevation: 0,
+          ),
+        ),
       ),
     );
   }

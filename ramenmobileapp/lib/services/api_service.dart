@@ -256,20 +256,29 @@ class ApiService {
 
   Future<List<MenuItem>> getMenuItemsByCategory(String category) async {
     try {
+      print('🌐 API: Making request to /menu/category/$category');
       final response = await _dio.get('/menu/category/$category');
+      print('📡 API: Response status: ${response.statusCode}');
+      
       if (response.statusCode == 200) {
         List<dynamic> data;
         if (response.data is Map) {
           data = response.data['data'] ?? response.data['items'] ?? [];
+          print('📦 API: Extracted ${data.length} items from Map response');
         } else if (response.data is List) {
           data = response.data;
+          print('📦 API: Got ${data.length} items from List response');
         } else {
           data = [];
+          print('⚠️ API: Unknown response format, using empty list');
         }
-        return data.map((item) => MenuItem.fromJson(item)).toList();
+        final menuItems = data.map((item) => MenuItem.fromJson(item)).toList();
+        print('✅ API: Successfully parsed ${menuItems.length} menu items');
+        return menuItems;
       }
       throw Exception('Failed to fetch menu items by category');
     } on DioException catch (e) {
+      print('❌ API: DioException for category $category: ${e.message}');
       throw _handleDioError(e);
     }
   }
@@ -452,6 +461,18 @@ class ApiService {
         return response.data;
       }
       throw Exception('Failed to create customer');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> getCustomerProfile() async {
+    try {
+      final response = await _dio.get('/customers/profile');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to fetch customer profile');
     } on DioException catch (e) {
       throw _handleDioError(e);
     }
@@ -644,10 +665,34 @@ class ApiService {
       return imagePath;
     }
     
+    // Handle backend uploaded images (starts with /uploads/)
+    if (imagePath.startsWith('/uploads/')) {
+      final serverBaseUrl = baseUrl.replaceAll('/api/v1', '');
+      return '$serverBaseUrl$imagePath';
+    }
+    
+    // Handle relative paths from backend (../assets/...)
+    if (imagePath.startsWith('../assets/')) {
+      return imagePath.replaceFirst('../', 'assets/');
+    }
+    
     // If it's just a filename (from backend), construct the full URL
     // Backend stores only filenames like "1752799756016-997715280-ramenbg.jpg"
-    final serverBaseUrl = baseUrl.replaceAll('/api/v1', '');
-    return '$serverBaseUrl/uploads/menus/$imagePath';
+    if (!imagePath.contains('/') && imagePath.contains('.')) {
+      final serverBaseUrl = baseUrl.replaceAll('/api/v1', '');
+      
+      // Handle default image mapping (same as POS system)
+      if (imagePath == 'default-ramen.jpg' || imagePath.startsWith('default-')) {
+        // Use the specific database image that POS system uses
+        const databaseImage = '1756859309524-197330587-databaseDesign.jpg';
+        return '$serverBaseUrl/uploads/menus/$databaseImage';
+      }
+      
+      return '$serverBaseUrl/uploads/menus/$imagePath';
+    }
+    
+    // Default case - treat as asset
+    return 'assets/$imagePath';
   }
 
   // Submit review for an order
@@ -680,8 +725,10 @@ class ApiService {
   }
 
   static bool isNetworkImage(String imagePath) {
-    // It's a network image if it's a full URL or a backend filename (not an asset)
-    return imagePath.startsWith('http://') || imagePath.startsWith('https://') || 
-           (!imagePath.startsWith('assets/') && !imagePath.contains('assets/'));
+    // It's a network image if it's a full URL, backend uploaded image, or backend filename (not an asset)
+    return imagePath.startsWith('http://') || 
+           imagePath.startsWith('https://') || 
+           imagePath.startsWith('/uploads/') ||
+           (!imagePath.startsWith('assets/') && !imagePath.contains('assets/') && imagePath.contains('.'));
   }
 } 
