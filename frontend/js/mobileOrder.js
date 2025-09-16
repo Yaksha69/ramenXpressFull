@@ -526,16 +526,31 @@ window.viewOrderDetails = async function(orderId) {
             const price = item.menuItem && typeof item.menuItem.price === 'number' ? item.menuItem.price : 0;
             const image = item.menuItem && item.menuItem.image ? item.menuItem.image : 'logo.png';
             const quantity = item.quantity || 0;
-            // Add-ons
-            let addOnsHtml = '';
+            // Add-ons and removed ingredients
+            let customizationsHtml = '';
             let addOnsTotal = 0;
+            
+            // Add-ons
             if (item.selectedAddOns && item.selectedAddOns.length > 0) {
-                addOnsHtml = '<ul class="mb-0 ps-3 small text-muted">';
+                customizationsHtml += '<ul class="mb-0 ps-3 small text-muted">';
                 item.selectedAddOns.forEach(addOn => {
-                    addOnsHtml += `<li>${addOn.name} (+₱${addOn.price.toFixed(2)})</li>`;
+                    customizationsHtml += `<li><i class="fas fa-plus-circle text-success me-1"></i>${addOn.name} (+₱${addOn.price.toFixed(2)})</li>`;
                     addOnsTotal += addOn.price;
                 });
-                addOnsHtml += '</ul>';
+                customizationsHtml += '</ul>';
+            }
+            
+            // Removed ingredients
+            if (item.removedIngredients && item.removedIngredients.length > 0) {
+                if (customizationsHtml) {
+                    customizationsHtml += '<ul class="mb-0 ps-3 small text-muted mt-1">';
+                } else {
+                    customizationsHtml += '<ul class="mb-0 ps-3 small text-muted">';
+                }
+                item.removedIngredients.forEach(ingredient => {
+                    customizationsHtml += `<li><i class="fas fa-minus-circle text-warning me-1"></i>No ${ingredient}</li>`;
+                });
+                customizationsHtml += '</ul>';
             }
             const itemUnitTotal = price + addOnsTotal;
             const subtotal = itemUnitTotal * quantity;
@@ -548,7 +563,7 @@ window.viewOrderDetails = async function(orderId) {
                         </div>
                         <div>
                             <div class="fw-semibold">${name}</div>  
-                            ${addOnsHtml}
+                            ${customizationsHtml}
                         </div>
                     </div>
                 </td>

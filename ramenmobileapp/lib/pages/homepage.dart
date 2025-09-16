@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/cart_service.dart';
 import '../services/menu_service.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
+import '../services/notification_counter_service.dart';
+import '../services/global_notification_service.dart';
 import '../models/menu_item.dart';
 
 import 'payment_page.dart';
@@ -44,6 +47,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _loadMenuItems();
     _loadAddOns();
     
+    // Set socket context for notifications
+    SocketService().setContext(context);
+    SocketService().connect(); // Ensure socket is connected
+    
+    // Set up global socket listener for notifications
+    SocketService().onOrderStatusUpdate = (data) {
+      print('📱 Homepage received order update: $data');
+      // Update notification counter when order status updates
+      NotificationCounterService().incrementUnreadCount();
+      
+      // Add notification to global service
+      _addNotificationToGlobalService(data);
+    };
+    
     // Initialize alert animations
     _alertController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -63,6 +80,98 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       parent: _alertController,
       curve: Curves.easeInOut,
     ));
+  }
+
+  void _addNotificationToGlobalService(Map<String, dynamic> data) {
+    final orderId = data['orderId']?.toString() ?? '';
+    final status = data['status']?.toString() ?? '';
+    final order = data['order'] as Map<String, dynamic>?;
+    
+    if (orderId.isEmpty || status.isEmpty) return;
+
+    final deliveryMethod = order?['deliveryMethod']?.toString() ?? '';
+    final isPickup = deliveryMethod.toLowerCase() == 'pickup';
+    
+    String title = '';
+    String message = '';
+    IconData icon = Icons.notifications;
+    Color color = const Color(0xFF2196F3);
+    
+    switch (status.toLowerCase()) {
+      case 'preparing':
+        title = 'Order Being Prepared';
+        message = 'Your order #$orderId is now being prepared by our kitchen!';
+        icon = Icons.restaurant_menu;
+        color = const Color(0xFFFF9800);
+        break;
+      case 'ready':
+        title = isPickup ? 'Ready for Pickup!' : 'Order Ready';
+        message = isPickup 
+          ? 'Your order #$orderId is ready for pickup!'
+          : 'Your order #$orderId is ready for delivery!';
+        icon = Icons.check_circle;
+        color = const Color(0xFF4CAF50);
+        break;
+      case 'out for delivery':
+      case 'outfordelivery':
+        title = 'Out for Delivery';
+        message = 'Your order #$orderId is on its way to you!';
+        icon = Icons.delivery_dining;
+        color = const Color(0xFF2196F3);
+        break;
+      case 'delivered':
+        title = isPickup ? 'Order Picked Up!' : 'Order Delivered!';
+        message = isPickup 
+          ? 'Thank you for picking up your order #$orderId!'
+          : 'Your order #$orderId has been delivered. Enjoy your meal!';
+        icon = Icons.done_all;
+        color = const Color(0xFF4CAF50);
+        break;
+      case 'cancelled':
+        title = 'Order Cancelled';
+        message = 'Your order #$orderId has been cancelled.';
+        icon = Icons.cancel;
+        color = const Color(0xFFD32D43);
+        break;
+      default:
+        title = 'Order Update';
+        message = 'Your order #$orderId status has been updated to $status.';
+        icon = Icons.info;
+        color = const Color(0xFF2196F3);
+    }
+
+    final notification = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'title': title,
+      'message': message,
+      'time': _formatNotificationTime(DateTime.now()),
+      'type': 'order',
+      'isRead': false,
+      'icon': icon,
+      'color': color,
+      'orderId': orderId,
+      'status': status,
+      'createdAt': DateTime.now(),
+    };
+
+    GlobalNotificationService().addNotification(notification);
+  }
+
+  String _formatNotificationTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return 'MMM dd, yyyy';
+    }
   }
 
   @override
@@ -270,7 +379,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     Map<String, dynamic> item,
     List<Map<String, dynamic>> selectedAddOns,
   ) async {
-    // Convert to MenuItem and AddOn objects
     final menuItem = MenuItem(
       name: item['name'],
       price: item['price'].toDouble(),
@@ -278,11 +386,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       category: item['category'],
     );
     
-    final addOns = selectedAddOns.map((addon) => 
-      AddOn(name: addon['name'], price: addon['price'].toDouble())
+    final addOns = selectedAddOns.map(
+      (addon) => AddOn(name: addon['name'], price: addon['price'].toDouble())
     ).toList();
     
-    await _cartService.addToCart(menuItem, addOns);
+    final removedIngredients = item['removedIngredients'] as List<String>? ?? [];
+    
+    await _cartService.addToCart(menuItem, addOns, removedIngredients: removedIngredients);
     setState(() {
       cartItemCount = _cartService.itemCount;
     });
@@ -290,6 +400,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _showAddOnsModal(BuildContext context, MenuItem item) {
     List<Map<String, dynamic>> selectedAddOns = [];
+    List<String> removedIngredients = [];
     double totalPrice = item.price;
     
     print('🔍 Opening modal for: ${item.name}');
@@ -401,9 +512,141 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ),
                       ),
                       const SizedBox(height: 20),
+                      
+                      // Remove Ingredients section
+                      const Text(
+                        'Remove Ingredients',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap ingredients you want to remove from your ${item.name}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Ingredients removal list
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: Column(
+                          children: [
+                            CheckboxListTile(
+                              value: removedIngredients.contains('Noodles'),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    removedIngredients.add('Noodles');
+                                  } else {
+                                    removedIngredients.remove('Noodles');
+                                  }
+                                });
+                              },
+                              title: const Text('Noodles', style: TextStyle(fontSize: 14)),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              activeColor: const Color(0xFFD32D43),
+                            ),
+                            CheckboxListTile(
+                              value: removedIngredients.contains('Chashu Pork'),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    removedIngredients.add('Chashu Pork');
+                                  } else {
+                                    removedIngredients.remove('Chashu Pork');
+                                  }
+                                });
+                              },
+                              title: const Text('Chashu Pork', style: TextStyle(fontSize: 14)),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              activeColor: const Color(0xFFD32D43),
+                            ),
+                            CheckboxListTile(
+                              value: removedIngredients.contains('Green Onions'),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    removedIngredients.add('Green Onions');
+                                  } else {
+                                    removedIngredients.remove('Green Onions');
+                                  }
+                                });
+                              },
+                              title: const Text('Green Onions', style: TextStyle(fontSize: 14)),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              activeColor: const Color(0xFFD32D43),
+                            ),
+                            CheckboxListTile(
+                              value: removedIngredients.contains('Seaweed'),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    removedIngredients.add('Seaweed');
+                                  } else {
+                                    removedIngredients.remove('Seaweed');
+                                  }
+                                });
+                              },
+                              title: const Text('Seaweed', style: TextStyle(fontSize: 14)),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              activeColor: const Color(0xFFD32D43),
+                            ),
+                            CheckboxListTile(
+                              value: removedIngredients.contains('Soft Boiled Egg'),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    removedIngredients.add('Soft Boiled Egg');
+                                  } else {
+                                    removedIngredients.remove('Soft Boiled Egg');
+                                  }
+                                });
+                              },
+                              title: const Text('Soft Boiled Egg', style: TextStyle(fontSize: 14)),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              activeColor: const Color(0xFFD32D43),
+                            ),
+                            CheckboxListTile(
+                              value: removedIngredients.contains('Bean Sprouts'),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    removedIngredients.add('Bean Sprouts');
+                                  } else {
+                                    removedIngredients.remove('Bean Sprouts');
+                                  }
+                                });
+                              },
+                              title: const Text('Bean Sprouts', style: TextStyle(fontSize: 14)),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              dense: true,
+                              activeColor: const Color(0xFFD32D43),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
                       // Add-ons section
                       const Text(
-                        'Add-ons',
+                        'Add Extras',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -563,10 +806,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               'price': item.price,
                               'image': item.image,
                               'category': item.category,
+                              'removedIngredients': removedIngredients,
                             }, selectedAddOns);
                             if (context.mounted) {
                               Navigator.pop(context);
-                              _showSweetAlertMessage('${item.name} added to cart');
+                              String customizationText = '';
+                              if (removedIngredients.isNotEmpty || selectedAddOns.isNotEmpty) {
+                                customizationText = ' (customized)';
+                              }
+                              _showSweetAlertMessage('${item.name}$customizationText added to cart');
                             }
                           },
                           child: AnimatedContainer(
@@ -675,20 +923,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ),
                         ),
                         // Show notification badge if there are unread notifications
-                        // You can replace this with actual unread notification count
-                        if (true) // Change this to check for unread notifications
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFD32D43),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
+                        ListenableBuilder(
+                          listenable: NotificationCounterService(),
+                          builder: (context, child) {
+                            return NotificationCounterService().hasUnreadNotifications
+                                ? Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFD32D43),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink();
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(width: 8),

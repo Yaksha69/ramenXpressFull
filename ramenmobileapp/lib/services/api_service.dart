@@ -307,6 +307,7 @@ class ApiService {
             'name': addon.name,
             'price': addon.price,
           }).toList(),
+          'removedIngredients': item.removedIngredients,
         }).toList(),
         'deliveryMethod': deliveryMethod,
         'deliveryAddress': deliveryAddress,

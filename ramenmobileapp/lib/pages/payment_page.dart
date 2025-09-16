@@ -53,6 +53,7 @@ class _PaymentPageState extends State<PaymentPage> {
         'name': addon.name,
         'price': addon.price,
       }).toList(),
+      'removedIngredients': cartItem.removedIngredients,
     }).toList();
   }
 
@@ -665,6 +666,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       item['image'],
                       item['quantity'].toString(),
                       item['addons'] ?? [],
+                      item['removedIngredients'] ?? [],
                       () => showEditItemModal(item),
                     ),
                   ),
@@ -1429,6 +1431,7 @@ class _PaymentPageState extends State<PaymentPage> {
     String image,
     String quantity,
     List<Map<String, dynamic>> addons,
+    List<String> removedIngredients,
     VoidCallback onRemove,
   ) {
     double addonsTotal = addons.fold(0.0, (sum, addon) => sum + addon['price']);
@@ -1559,7 +1562,7 @@ class _PaymentPageState extends State<PaymentPage> {
               ],
             ),
           ),
-          if (addons.isNotEmpty)
+          if (addons.isNotEmpty || removedIngredients.isNotEmpty)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16.0),
               padding: const EdgeInsets.all(12.0),
@@ -1574,47 +1577,86 @@ class _PaymentPageState extends State<PaymentPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.add_circle_outline,
-                        size: 16,
-                        color: Color(0xFFD32D43),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'Add-ons',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A1A),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ...addons.map((addon) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  if (addons.isNotEmpty) ...[
+                    Row(
                       children: [
-                        Text(
-                          '• ${addon['name']}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF1A1A1A),
-                          ),
+                        const Icon(
+                          Icons.add_circle_outline,
+                          size: 16,
+                          color: Color(0xFFD32D43),
                         ),
-                        Text(
-                          '+₱${addon['price'].toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFFD32D43),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Add-ons',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A1A),
                           ),
                         ),
                       ],
                     ),
-                  ))
+                    const SizedBox(height: 8),
+                    ...addons.map((addon) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '• ${addon['name']}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                          ),
+                          Text(
+                            '+₱${addon['price'].toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFFD32D43),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                  if (addons.isNotEmpty && removedIngredients.isNotEmpty)
+                    const SizedBox(height: 12),
+                  if (removedIngredients.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.remove_circle_outline,
+                          size: 16,
+                          color: Color(0xFF757575),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Removed Ingredients',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A1A1A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...removedIngredients.map((ingredient) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            '• No $ingredient',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF757575),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
                 ],
               ),
             ),

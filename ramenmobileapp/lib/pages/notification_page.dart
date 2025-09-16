@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/notification_counter_service.dart';
+import '../services/global_notification_service.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -9,98 +11,52 @@ class NotificationPage extends StatefulWidget {
 
 class _NotificationPageState extends State<NotificationPage> {
   bool _showAllNotifications = true;
+  bool _isLoading = true;
 
-  // Sample notification data
-  final List<Map<String, dynamic>> _notifications = [
-    {
-      'id': '1',
-      'title': 'Order Confirmed!',
-      'message': 'Your Tonkotsu Ramen order has been confirmed and is being prepared.',
-      'time': '2 minutes ago',
-      'type': 'order',
-      'isRead': false,
-      'icon': Icons.check_circle,
-      'color': const Color(0xFF4CAF50),
-    },
-    {
-      'id': '2',
-      'title': 'Order Ready for Pickup',
-      'message': 'Your Karaage Ramen is ready! Please pick it up at the counter.',
-      'time': '15 minutes ago',
-      'type': 'pickup',
-      'isRead': false,
-      'icon': Icons.restaurant,
-      'color': const Color(0xFF2196F3),
-    },
-    {
-      'id': '3',
-      'title': 'Special Offer!',
-      'message': 'Get 20% off on all ramen bowls this weekend. Use code: RAMEN20',
-      'time': '1 hour ago',
-      'type': 'promo',
-      'isRead': true,
-      'icon': Icons.local_offer,
-      'color': const Color(0xFFFF9800),
-    },
-    {
-      'id': '4',
-      'title': 'New Menu Item',
-      'message': 'Try our new Spicy Miso Ramen! Available now for a limited time.',
-      'time': '2 hours ago',
-      'type': 'menu',
-      'isRead': true,
-      'icon': Icons.new_releases,
-      'color': const Color(0xFF9C27B0),
-    },
-    {
-      'id': '5',
-      'title': 'Order Delivered',
-      'message': 'Your Shoyu Ramen has been successfully delivered. Enjoy your meal!',
-      'time': '1 day ago',
-      'type': 'delivery',
-      'isRead': true,
-      'icon': Icons.delivery_dining,
-      'color': const Color(0xFF4CAF50),
-    },
-    {
-      'id': '6',
-      'title': 'Payment Successful',
-      'message': 'Payment of ₱210.00 for your order has been processed successfully.',
-      'time': '1 day ago',
-      'type': 'payment',
-      'isRead': true,
-      'icon': Icons.payment,
-      'color': const Color(0xFF4CAF50),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _setupSocketListener();
+    _loadNotifications();
+  }
+
+  void _setupSocketListener() {
+    print('📱 Notification page initialized');
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
 
   List<Map<String, dynamic>> get filteredNotifications {
+    final notifications = GlobalNotificationService().notifications;
     if (_showAllNotifications) {
-      return _notifications;
+      return notifications;
     }
-    return _notifications.where((notification) => !notification['isRead']).toList();
+    return notifications.where((notification) => !notification['isRead']).toList();
   }
 
 
   void _markAsRead(String notificationId) {
-    setState(() {
-      final notification = _notifications.firstWhere((n) => n['id'] == notificationId);
-      notification['isRead'] = true;
-    });
+    GlobalNotificationService().markAsRead(notificationId);
+    NotificationCounterService().decrementUnreadCount();
   }
 
   void _markAllAsRead() {
-    setState(() {
-      for (var notification in _notifications) {
-        notification['isRead'] = true;
-      }
-    });
+    GlobalNotificationService().markAllAsRead();
+    NotificationCounterService().markAllAsRead();
   }
 
   void _deleteNotification(String notificationId) {
-    setState(() {
-      _notifications.removeWhere((n) => n['id'] == notificationId);
-    });
+    final notifications = GlobalNotificationService().notifications;
+    final notification = notifications.firstWhere((n) => n['id'] == notificationId);
+    if (!notification['isRead']) {
+      NotificationCounterService().decrementUnreadCount();
+    }
+    GlobalNotificationService().removeNotification(notificationId);
   }
 
   @override
@@ -202,16 +158,23 @@ class _NotificationPageState extends State<NotificationPage> {
           
           // Notifications list
           Expanded(
-            child: filteredNotifications.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filteredNotifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = filteredNotifications[index];
-                      return _buildNotificationCard(notification);
-                    },
-                  ),
+            child: ListenableBuilder(
+              listenable: GlobalNotificationService(),
+              builder: (context, child) {
+                return _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : filteredNotifications.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: filteredNotifications.length,
+                            itemBuilder: (context, index) {
+                              final notification = filteredNotifications[index];
+                              return _buildNotificationCard(notification);
+                            },
+                          );
+              },
+            ),
           ),
         ],
       ),

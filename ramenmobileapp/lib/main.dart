@@ -15,10 +15,25 @@ import 'pages/splash_screen.dart';
 import 'pages/welcome_page.dart';
 import 'pages/email_verification_page.dart';
 import 'services/api_service.dart';
+import 'services/socket_service.dart';
+import 'services/notification_service.dart';
 
-void main() {
-  // Initialize API service
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize services
   ApiService().initialize();
+  
+  // Initialize notification service with error handling
+  try {
+    await NotificationService().initialize();
+  } catch (e) {
+    print('⚠️ Notification service initialization failed: $e');
+    // Continue without notifications rather than crashing
+  }
+  
+  SocketService().connect();
+  
   runApp(const MyApp());
 }
 
