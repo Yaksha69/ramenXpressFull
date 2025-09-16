@@ -24,6 +24,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Services
   final CartService _cartService = CartService();
   final MenuService _menuService = MenuService();
+  final ApiService _apiService = ApiService();
 
   // Local cart state
   int cartItemCount = 0;
@@ -34,6 +35,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Add-ons state
   List<MenuItem> _addOns = [];
+
+  // User profile state
+  String userName = 'User';
+  bool _isLoadingProfile = true;
 
   // Sweet Alert state
   late AnimationController _alertController;
@@ -46,6 +51,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _loadCart();
     _loadMenuItems();
     _loadAddOns();
+    _loadUserProfile();
     
     // Set socket context for notifications
     SocketService().setContext(context);
@@ -263,13 +269,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
 
     try {
+      print('🔍 Loading menu items for category: $selectedCategory');
       final items = await _menuService.getMenuItemsByCategory(selectedCategory);
+      print('✅ Loaded ${items.length} items for category: $selectedCategory');
       setState(() {
         _menuItems = items;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading menu items: $e');
+      print('❌ Error loading menu items for category $selectedCategory: $e');
       setState(() {
         _isLoading = false;
       });
@@ -315,6 +323,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       });
     } catch (e) {
       print('❌ Error loading add-ons: $e');
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      setState(() {
+        _isLoadingProfile = true;
+      });
+      
+      await _apiService.loadToken();
+      final response = await _apiService.getCustomerProfile();
+      final customerData = response['data'] ?? response;
+      
+      setState(() {
+        userName = '${customerData['firstName'] ?? ''} ${customerData['lastName'] ?? ''}'.trim();
+        if (userName.isEmpty) {
+          userName = 'User';
+        }
+        _isLoadingProfile = false;
+      });
+    } catch (e) {
+      print('❌ Error loading user profile: $e');
+      setState(() {
+        userName = 'User';
+        _isLoadingProfile = false;
+      });
     }
   }
 
@@ -540,106 +574,81 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.grey[200]!),
                         ),
-                        child: Column(
-                          children: [
-                            CheckboxListTile(
-                              value: removedIngredients.contains('Noodles'),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    removedIngredients.add('Noodles');
-                                  } else {
-                                    removedIngredients.remove('Noodles');
-                                  }
-                                });
-                              },
-                              title: const Text('Noodles', style: TextStyle(fontSize: 14)),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              dense: true,
-                              activeColor: const Color(0xFFD32D43),
+                        child: item.ingredients.isEmpty 
+                          ? const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Text(
+                                'No ingredients available for removal',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : Column(
+                              children: item.ingredients.map((ingredient) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  decoration: BoxDecoration(
+                                    color: removedIngredients.contains(ingredient.name) 
+                                        ? Colors.red[50] 
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: CheckboxListTile(
+                                    value: removedIngredients.contains(ingredient.name),
+                                    onChanged: (bool? value) {
+                                      setState(() {
+                                        if (value == true) {
+                                          removedIngredients.add(ingredient.name);
+                                        } else {
+                                          removedIngredients.remove(ingredient.name);
+                                        }
+                                      });
+                                    },
+                                    title: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.remove_circle_outline,
+                                          size: 16,
+                                          color: removedIngredients.contains(ingredient.name) 
+                                              ? Colors.red 
+                                              : Colors.grey,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            ingredient.name,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: removedIngredients.contains(ingredient.name) 
+                                                  ? Colors.red[700] 
+                                                  : Colors.black87,
+                                              decoration: removedIngredients.contains(ingredient.name) 
+                                                  ? TextDecoration.lineThrough 
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                        if (ingredient.quantity > 0)
+                                          Text(
+                                            '${ingredient.quantity} ${ingredient.unit}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    controlAffinity: ListTileControlAffinity.leading,
+                                    dense: true,
+                                    activeColor: const Color(0xFFD32D43),
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                            CheckboxListTile(
-                              value: removedIngredients.contains('Chashu Pork'),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    removedIngredients.add('Chashu Pork');
-                                  } else {
-                                    removedIngredients.remove('Chashu Pork');
-                                  }
-                                });
-                              },
-                              title: const Text('Chashu Pork', style: TextStyle(fontSize: 14)),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              dense: true,
-                              activeColor: const Color(0xFFD32D43),
-                            ),
-                            CheckboxListTile(
-                              value: removedIngredients.contains('Green Onions'),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    removedIngredients.add('Green Onions');
-                                  } else {
-                                    removedIngredients.remove('Green Onions');
-                                  }
-                                });
-                              },
-                              title: const Text('Green Onions', style: TextStyle(fontSize: 14)),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              dense: true,
-                              activeColor: const Color(0xFFD32D43),
-                            ),
-                            CheckboxListTile(
-                              value: removedIngredients.contains('Seaweed'),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    removedIngredients.add('Seaweed');
-                                  } else {
-                                    removedIngredients.remove('Seaweed');
-                                  }
-                                });
-                              },
-                              title: const Text('Seaweed', style: TextStyle(fontSize: 14)),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              dense: true,
-                              activeColor: const Color(0xFFD32D43),
-                            ),
-                            CheckboxListTile(
-                              value: removedIngredients.contains('Soft Boiled Egg'),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    removedIngredients.add('Soft Boiled Egg');
-                                  } else {
-                                    removedIngredients.remove('Soft Boiled Egg');
-                                  }
-                                });
-                              },
-                              title: const Text('Soft Boiled Egg', style: TextStyle(fontSize: 14)),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              dense: true,
-                              activeColor: const Color(0xFFD32D43),
-                            ),
-                            CheckboxListTile(
-                              value: removedIngredients.contains('Bean Sprouts'),
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  if (value == true) {
-                                    removedIngredients.add('Bean Sprouts');
-                                  } else {
-                                    removedIngredients.remove('Bean Sprouts');
-                                  }
-                                });
-                              },
-                              title: const Text('Bean Sprouts', style: TextStyle(fontSize: 14)),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              dense: true,
-                              activeColor: const Color(0xFFD32D43),
-                            ),
-                          ],
-                        ),
                       ),
                       
                       const SizedBox(height: 20),
@@ -886,159 +895,313 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                automaticallyImplyLeading: false,
-                floating: true,
-                pinned: true,
-                expandedHeight: 120,
-                backgroundColor: Colors.white,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.only(top: 60, left: 16, right: 16),
-                    child: Row(
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            automaticallyImplyLeading: false,
+            floating: false,
+            pinned: true,
+            expandedHeight: 120,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFD32D43),
+                      Color(0xFFE85A4F),
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 15),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                      'RamenXpress',
-                      style: TextStyle(
-                        color: Color(0xFF1A1A1A),
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Stack(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/notifications');
-                          },
-                          icon: const Icon(
-                            Icons.notifications_none,
-                            color: Color(0xFF1A1A1A),
-                          ),
-                        ),
-                        // Show notification badge if there are unread notifications
-                        ListenableBuilder(
-                          listenable: NotificationCounterService(),
-                          builder: (context, child) {
-                            return NotificationCounterService().hasUnreadNotifications
-                                ? Positioned(
-                                    right: 8,
-                                    top: 8,
-                                    child: Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFD32D43),
-                                        shape: BoxShape.circle,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isLoadingProfile ? 'Hello! 👋' : 'Hello $userName! 👋',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'RamenXpress',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      IconButton(
+                                        onPressed: () {
+                                          Navigator.pushNamed(context, '/notifications');
+                                        },
+                                        icon: const Icon(
+                                          Icons.notifications_outlined,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
                                       ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink();
-                          },
+                                      ListenableBuilder(
+                                        listenable: NotificationCounterService(),
+                                        builder: (context, child) {
+                                          return NotificationCounterService().hasUnreadNotifications
+                                              ? Positioned(
+                                                  right: 8,
+                                                  top: 8,
+                                                  child: Container(
+                                                    width: 10,
+                                                    height: 10,
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.white,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                )
+                                              : const SizedBox.shrink();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(2),
+                                  child: const CircleAvatar(
+                                    backgroundImage: AssetImage('assets/adminPIC.png'),
+                                    radius: 20,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(width: 8),
-                    const CircleAvatar(
-                      backgroundImage: AssetImage('assets/adminPIC.png'),
-                      radius: 20,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Search Bar
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search for your favorite ramen...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
+                  // Modern Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          spreadRadius: 0,
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                      });
-                      // Debounce search
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        if (mounted) {
-                          _searchMenuItems();
-                        }
-                      });
-                    },
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search for your favorite ramen...',
+                        hintStyle: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        prefixIcon: Container(
+                          margin: const EdgeInsets.all(12),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD32D43).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.search,
+                            color: Color(0xFFD32D43),
+                            size: 20,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFD32D43),
+                            width: 2,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          if (mounted) {
+                            _searchMenuItems();
+                          }
+                        });
+                      },
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                  // Categories
+                  // Categories Section
                   const Text(
                     'Categories',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children:
-                          _menuService.categories.map(
-                            (category) {
-                              bool isSelected = selectedCategory == category;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: FilterChip(
-                                  label: Text(category),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      selectedCategory = category;
-                                    });
-                                    _loadMenuItems();
-                                  },
-                                  selectedColor: const Color(0xFFD32D43),
-                                  checkmarkColor: Colors.white,
-                                  labelStyle: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : const Color(0xFF1A1A1A),
-                                  ),
-                                ),
-                              );
-                            },
-                          ).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Menu Items
-                  const Text(
-                    'Menu',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A1A),
+                      letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 16),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _menuService.categories.map((category) {
+                        bool isSelected = selectedCategory == category;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: isSelected
+                                  ? const LinearGradient(
+                                      colors: [Color(0xFFD32D43), Color(0xFFE85A4F)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: isSelected ? null : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isSelected
+                                      ? const Color(0xFFD32D43).withOpacity(0.3)
+                                      : Colors.black.withOpacity(0.04),
+                                  spreadRadius: 0,
+                                  blurRadius: isSelected ? 12 : 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    selectedCategory = category;
+                                  });
+                                  _loadMenuItems();
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  child: Text(
+                                    category,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : const Color(0xFF1A1A1A),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Menu Items Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Popular Menu',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            color: Color(0xFFD32D43),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   _isLoading
                       ? const Center(
                           child: CircularProgressIndicator(
@@ -1056,136 +1219,201 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               ),
                             )
                           : GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.8,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                    itemCount: filteredMenuItems.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredMenuItems[index];
-                      return Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        child: InkWell(
-                                    splashColor: const Color(0x1AD32D43),
-                          highlightColor: Colors.transparent,
-                          onTap: () {
-                            _showAddOnsModal(context, item);
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(12),
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.75,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 20,
+                              ),
+                              itemCount: filteredMenuItems.length,
+                              itemBuilder: (context, index) {
+                                final item = filteredMenuItems[index];
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.06),
+                                        spreadRadius: 0,
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
                                   ),
-                                  child: _buildMenuItemImage(item.image, width: double.infinity),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: Color(0xFF1A1A1A),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        _showAddOnsModal(context, item);
+                                      },
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Container(
+                                                width: double.infinity,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  color: Colors.grey[50],
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  child: _buildMenuItemImage(
+                                                    item.image,
+                                                    width: double.infinity,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item.name,
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 15,
+                                                      color: Color(0xFF1A1A1A),
+                                                      letterSpacing: -0.2,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        '₱${item.price.toStringAsFixed(2)}',
+                                                        style: const TextStyle(
+                                                          color: Color(0xFFD32D43),
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w700,
+                                                          letterSpacing: 0.2,
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        width: 32,
+                                                        height: 32,
+                                                        decoration: BoxDecoration(
+                                                          gradient: const LinearGradient(
+                                                            colors: [Color(0xFFD32D43), Color(0xFFE85A4F)],
+                                                            begin: Alignment.topLeft,
+                                                            end: Alignment.bottomRight,
+                                                          ),
+                                                          borderRadius: BorderRadius.circular(10),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: const Color(0xFFD32D43).withOpacity(0.3),
+                                                              blurRadius: 8,
+                                                              offset: const Offset(0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: const Icon(
+                                                          Icons.add,
+                                                          color: Colors.white,
+                                                          size: 18,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '₱${item.price.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        color: Color(0xFFD32D43),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                                  ),
+                                );
+                              },
+                            ),
                 ],
               ),
             ),
           ),
         ],
       ),
-      ],
-    ),
-    bottomNavigationBar: Container(
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(
-                red: 128,
-                green: 128,
-                blue: 128,
-                alpha: 10,
-              ),
-              spreadRadius: 1,
-              blurRadius: 10,
-              offset: const Offset(0, -1),
+              color: Colors.black.withOpacity(0.08),
+              spreadRadius: 0,
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: 0,
-          onTap: (index) {
-            switch (index) {
-              case 0:
-                // Already on home page
-                break;
-              case 1:
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PaymentPage()),
-                );
-                break;
-              case 2:
-                Navigator.pushNamed(context, '/order-history');
-                break;
-              case 3:
-                Navigator.pushNamed(context, '/profile');
-                break;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-          ],
-          selectedItemColor: const Color(0xFFD32D43),
-          unselectedItemColor: const Color(0xFF1A1A1A),
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor: Colors.white,
-          type: BottomNavigationBarType.fixed,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: BottomNavigationBar(
+              currentIndex: 0,
+              onTap: (index) {
+                switch (index) {
+                  case 0:
+                    break;
+                  case 1:
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PaymentPage()),
+                    );
+                    break;
+                  case 2:
+                    Navigator.pushNamed(context, '/order-history');
+                    break;
+                  case 3:
+                    Navigator.pushNamed(context, '/profile');
+                    break;
+                }
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: '',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.shopping_cart_outlined),
+                  activeIcon: Icon(Icons.shopping_cart),
+                  label: '',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history_outlined),
+                  activeIcon: Icon(Icons.history),
+                  label: '',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: '',
+                ),
+              ],
+              selectedItemColor: const Color(0xFFD32D43),
+              unselectedItemColor: Colors.grey[400],
+              showSelectedLabels: false,
+              showUnselectedLabels: false,
+              backgroundColor: Colors.transparent,
+              type: BottomNavigationBarType.fixed,
+              elevation: 0,
+            ),
+          ),
         ),
       ),
-      floatingActionButton: null,
     );
   }
 }

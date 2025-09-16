@@ -4,18 +4,25 @@ import 'api_service.dart';
 class MenuService {
   final ApiService _apiService = ApiService();
   
-  // Example categories
-  List<String> categories = ['All', 'Ramen', 'Rice Bowl', 'Sides', 'Drinks', 'add-ons'];
+  // Categories matching backend Menu model
+  List<String> categories = ['All', 'ramen', 'rice bowls', 'side dishes', 'sushi', 'party trays', 'add-ons', 'drinks'];
 
 
   Future<List<MenuItem>> getMenuItemsByCategory(String category) async {
     try {
+      print('🔍 MenuService: Fetching items for category: $category');
       if (category == 'All') {
-        return await _apiService.getMenuItems();
+        print('📋 MenuService: Fetching all menu items');
+        final items = await _apiService.getMenuItems();
+        print('✅ MenuService: Got ${items.length} items for All category');
+        return items;
       }
-      return await _apiService.getMenuItemsByCategory(category);
+      print('📋 MenuService: Fetching items for specific category: $category');
+      final items = await _apiService.getMenuItemsByCategory(category);
+      print('✅ MenuService: Got ${items.length} items for category: $category');
+      return items;
     } catch (e) {
-      print('Error fetching menu items: $e');
+      print('❌ MenuService Error fetching menu items for category $category: $e');
       // Return empty list if API fails
       return [];
     }
