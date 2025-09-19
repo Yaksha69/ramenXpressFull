@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const emailOTPController = require('../controllers/emailOTPController');
+const smsOTPController = require('../controllers/smsOTPController');
 
 // Email OTP routes
 // Send email OTP for registration
@@ -14,5 +15,24 @@ router.post('/verify-otp', emailOTPController.verifyOTP);
 
 // Resend email OTP
 router.post('/resend-otp', emailOTPController.resendOTP);
+
+// SMS OTP routes
+// Send SMS OTP for phone number verification (registration)
+router.post('/send-phone-otp', smsOTPController.sendPhoneOTP);
+
+// Verify SMS OTP for phone number verification
+router.post('/verify-phone-otp', smsOTPController.verifyPhoneOTP);
+
+// Send SMS OTP for login
+router.post('/send-login-phone-otp', smsOTPController.sendLoginPhoneOTP);
+
+// Verify SMS OTP for login
+router.post('/verify-login-phone-otp', smsOTPController.verifyLoginPhoneOTP);
+
+// Get OTP list for a phone number (admin/debug)
+router.get('/phone-otp-list/:phoneNumber', smsOTPController.getOTPList);
+
+// Check SMS credits balance
+router.get('/sms-credits', smsOTPController.checkCredits);
 
 module.exports = router;

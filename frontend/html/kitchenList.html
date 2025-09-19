@@ -9,6 +9,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="../css/kitchen.css" rel="stylesheet">
   <link href="../css/globalNotifications.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <!-- Socket.IO CDN for real-time updates -->
@@ -46,12 +47,22 @@
         
         <!-- Admin Dropdown -->
         <div class="dropdown">
-          <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="../assets/adminPIC.png" alt="admin" class="rounded-circle me-2" style="height: 40px; width: 40px;">
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle me-3" id="adminDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <p class="m-2">Cashier</p>
+            <i class="bi bi-person-circle fs-3"></i>
           </a>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="adminDropdown" style="min-width: 200px;">
+            <li class="dropdown-header d-flex align-items-center">
+              <div>
+                <div class="fw-bold text-dark">Cashier</div>
+              </div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
             <li>
-              <button class="dropdown-item" onclick="window.location.href='../login.html'">Logout</button>
+              <button class="dropdown-item d-flex align-items-center text-danger" onclick="window.location.href='../login.html'">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                Logout
+              </button>
             </li>
           </ul>
         </div>

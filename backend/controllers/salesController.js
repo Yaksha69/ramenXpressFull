@@ -20,30 +20,55 @@ const getLowStockThreshold = async () => {
 // Generate simple sequential order ID - always check database for highest existing ID
 const generateOrderID = async () => {
     try {
-        // Always get the highest existing order ID from the database
-        const lastSale = await Sales.findOne({}, {}, { sort: { 'orderID': -1 } });
-        let nextNumber = 1;
+        // Check both Sales and POSOrder collections for the highest existing order ID
+        const [lastSale, lastPosOrder] = await Promise.all([
+            Sales.findOne({}, {}, { sort: { 'orderID': -1 } }),
+            POSOrder.findOne({}, {}, { sort: { 'orderID': -1 } })
+        ]);
         
+        let nextNumber = 1;
+        let highestOrderID = null;
+        
+        // Find the highest order ID from both collections
         if (lastSale && lastSale.orderID) {
-            nextNumber = parseInt(lastSale.orderID, 10) + 1;
-            console.log(`Found highest order ID: ${lastSale.orderID}, next will be: ${nextNumber}`);
+            const saleNumber = parseInt(lastSale.orderID, 10);
+            if (saleNumber > nextNumber) {
+                nextNumber = saleNumber + 1;
+                highestOrderID = lastSale.orderID;
+            }
+        }
+        
+        if (lastPosOrder && lastPosOrder.orderID) {
+            const posNumber = parseInt(lastPosOrder.orderID, 10);
+            if (posNumber >= nextNumber) {
+                nextNumber = posNumber + 1;
+                highestOrderID = lastPosOrder.orderID;
+            }
+        }
+        
+        if (highestOrderID) {
+            console.log(`Found highest order ID: ${highestOrderID}, next will be: ${nextNumber}`);
         } else {
-            console.log('No existing sales found, starting with: 1');
+            console.log('No existing orders found, starting with: 1');
         }
         
         // Format as 4-digit number with leading zeros
         let orderID = nextNumber.toString().padStart(4, '0');
         
-        // Check if this order ID already exists (safety check)
+        // Check if this order ID already exists in both collections (safety check)
         let attempts = 0;
         while (attempts < 10) { // Max 10 attempts to avoid infinite loop
-            const existingSale = await Sales.findOne({ orderID: orderID });
-            if (!existingSale) {
+            const [existingSale, existingPosOrder] = await Promise.all([
+                Sales.findOne({ orderID: orderID }),
+                POSOrder.findOne({ orderID: orderID })
+            ]);
+            
+            if (!existingSale && !existingPosOrder) {
                 console.log(`Generated unique order ID: ${orderID}`);
                 return orderID;
             }
             
-            // If order ID exists, increment and try again
+            // If order ID exists in either collection, increment and try again
             nextNumber++;
             orderID = nextNumber.toString().padStart(4, '0');
             attempts++;
@@ -405,14 +430,19 @@ exports.createMultipleSales = async (req, res) => {
         const orderID = await generateOrderID();
         console.log(`Generated order ID: ${orderID} for ${items.length} items`);
         
-        // Double-check that this order ID doesn't already exist
-        const existingOrder = await Sales.findOne({ orderID: orderID });
-        if (existingOrder) {
+        // Double-check that this order ID doesn't already exist in either collection
+        const [existingSale, existingPosOrder] = await Promise.all([
+            Sales.findOne({ orderID: orderID }),
+            POSOrder.findOne({ orderID: orderID })
+        ]);
+        
+        if (existingSale || existingPosOrder) {
             console.error(`CRITICAL: Generated order ID ${orderID} already exists in database!`);
             return res.status(500).json({ 
                 message: 'Order ID conflict detected', 
                 orderID: orderID,
-                existingOrder: existingOrder._id
+                existingSale: existingSale?._id,
+                existingPosOrder: existingPosOrder?._id
             });
         }
         

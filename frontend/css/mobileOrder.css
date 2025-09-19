@@ -464,7 +464,7 @@ body {
 }
 
 #sidebarMenu .nav-link.text-white {
-  color: #dc3545 !important;
+  color: #000000 !important;
   transition: all 0.3s ease;
   padding: 0.75rem 1rem;
   border-radius: 0.375rem;

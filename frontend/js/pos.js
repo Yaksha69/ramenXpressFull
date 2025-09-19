@@ -244,11 +244,11 @@ function setupEventListeners() {
     categoryButtons.forEach(button => {
         button.addEventListener('click', () => {
         categoryButtons.forEach(btn => {
-                btn.classList.remove('btn-danger');
-                btn.classList.add('btn-outline-danger');
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-success');
             });
-            button.classList.remove('btn-outline-danger');
-            button.classList.add('btn-danger');
+            button.classList.remove('btn-outline-success');
+            button.classList.add('btn-success');
             selectedCategory = button.dataset.category;
             renderMenuItems();
         });
@@ -415,8 +415,8 @@ function renderMenuItems() {
                     ${stockBadge}
                     <img src="${imageUrl}" class="card-img-top" alt="${item.name}" style="height: 150px; object-fit: contain;" onerror="this.src='../assets/ramen1.jpg'">
                     <div class="card-body p-2">
-                        <h6 class="card-title mb-1">${item.name}</h6>
-                        <p class="card-text text-danger fw-bold mb-0">₱${item.price.toFixed(2)}</p>
+                        <h6 class="card-title text-secondary mb-1">${item.name}</h6>
+                        <p class="card-text text-dark fw-bold mb-0">₱${item.price.toFixed(2)}</p>
                     </div>
                 </div>
             </div>
@@ -600,7 +600,7 @@ function loadAddOnsFromMenu() {
                             <label class="form-check-label" for="addon_${addon._id}">
                                 <img src="${getImageUrl(addon.image)}" class="img-fluid mb-1" style="height: 40px; object-fit: contain;" alt="${addon.name}" onerror="this.src='../assets/ramen1.jpg'">
                                 <small>${addon.name}</small>
-                                <div class="text-danger small">+₱${addon.price.toFixed(2)}</div>
+                                <div class="text-dark small">+₱${addon.price.toFixed(2)}</div>
                             </label>
                         </div>
                     </div>
@@ -800,8 +800,8 @@ async function loadAddOns() {
             let stockBadge = "";
             
             if (!addon.canBeOrdered) {
-                cardClass += " border-danger";
-                stockBadge = '<span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Out</span>';
+                cardClass += " border-primary";
+                stockBadge = '<span class="badge bg-primary position-absolute top-0 end-0 m-1" style="font-size: 0.6rem;">Out</span>';
             } else {
                 cardClass += " border-success";
             }
@@ -850,7 +850,7 @@ function handleIngredientSelection(checkbox) {
     const ingredientCard = checkbox.closest('.card');
     
     if (checkbox.checked) {
-        ingredientCard.classList.add('bg-danger', 'bg-opacity-10');
+        ingredientCard.classList.add('bg-success', 'bg-opacity-10');
         // Add to selectedAddons with action: 'remove'
         selectedAddons.push({
             id: ingredientName,
@@ -859,7 +859,7 @@ function handleIngredientSelection(checkbox) {
             action: 'remove'
         });
     } else {
-        ingredientCard.classList.remove('bg-danger', 'bg-opacity-10');
+        ingredientCard.classList.remove('bg-success', 'bg-opacity-10');
         // Remove from selectedAddons
         selectedAddons = selectedAddons.filter(item => 
             !(item.name === ingredientName && item.action === 'remove')

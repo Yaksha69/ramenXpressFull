@@ -32,6 +32,14 @@ const customerSchema = new mongoose.Schema({
     sparse: true, // Allows multiple null values
     trim: true
   },
+  phoneNumber: {
+    type: String,
+    required: false, // Phone number for SMS OTP
+    unique: true,
+    sparse: true, // Allows multiple null values
+    trim: true,
+    match: [/^63\d{10}$/, 'Phone number must be in international format (63XXXXXXXXXX)']
+  },
   password: {
     type: String,
     required: function() {
@@ -70,6 +78,15 @@ const customerSchema = new mongoose.Schema({
     type: String,
     enum: ['email', 'phone', 'google'],
     default: 'email'
+  },
+  // OTP verification fields
+  otpCode: {
+    type: String,
+    required: false
+  },
+  otpExpiresAt: {
+    type: Date,
+    required: false
   }
 }, {
   timestamps: true

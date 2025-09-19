@@ -336,6 +336,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       // Display transactions with pagination
       displayTransactionsWithPagination(filteredTransactions);
 
+      // Populate menu items filter
+      populateMenuItems();
+
       // Show success message if no transactions
       if (allTransactions.length === 0) {
         tbody.innerHTML = `
@@ -891,6 +894,7 @@ function filterTransactions() {
   const startDate = document.getElementById('filterStartDate').value;
   const endDate = document.getElementById('filterEndDate').value;
   const orderType = document.getElementById('filterOrderType').value;
+  const menuItem = document.getElementById('filterMenuItem').value;
   
   // Filter transactions
   filteredTransactions = allTransactions.filter(transaction => {
@@ -902,8 +906,9 @@ function filterTransactions() {
     const matchesSearch = id.includes(searchTerm) || type.includes(searchTerm) || items.includes(searchTerm);
     const matchesDate = (!startDate || date >= startDate) && (!endDate || date <= endDate);
     const matchesOrderType = !orderType || type === orderType;
+    const matchesMenuItem = !menuItem || items.includes(menuItem.toLowerCase());
     
-    return matchesSearch && matchesDate && matchesOrderType;
+    return matchesSearch && matchesDate && matchesOrderType && matchesMenuItem;
   });
 
   // Reset to first page when filtering
@@ -930,12 +935,40 @@ function filterTransactions() {
   displayTransactionsWithPagination(filteredTransactions);
 }
 
+// Function to populate menu items dropdown
+function populateMenuItems() {
+  const menuItemSelect = document.getElementById('filterMenuItem');
+  if (!menuItemSelect) return;
+  
+  // Get all unique menu items from transactions
+  const menuItems = new Set();
+  allTransactions.forEach(transaction => {
+    transaction.items.forEach(item => {
+      if (item.type === 'main') { // Only main items, not add-ons
+        menuItems.add(item.name);
+      }
+    });
+  });
+  
+  // Clear existing options except "All Items"
+  menuItemSelect.innerHTML = '<option value="">All Items</option>';
+  
+  // Add menu items to dropdown
+  Array.from(menuItems).sort().forEach(itemName => {
+    const option = document.createElement('option');
+    option.value = itemName;
+    option.textContent = itemName;
+    menuItemSelect.appendChild(option);
+  });
+}
+
 // Add event listeners for search and filter
 document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('searchInput');
   const filterStartDate = document.getElementById('filterStartDate');
   const filterEndDate = document.getElementById('filterEndDate');
   const filterOrderType = document.getElementById('filterOrderType');
+  const filterMenuItem = document.getElementById('filterMenuItem');
   
   if (searchInput) {
     searchInput.addEventListener('input', filterTransactions);
@@ -951,6 +984,10 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (filterOrderType) {
     filterOrderType.addEventListener('change', filterTransactions);
+  }
+  
+  if (filterMenuItem) {
+    filterMenuItem.addEventListener('change', filterTransactions);
   }
 });
 
@@ -974,14 +1011,14 @@ function downloadReports() {
 }
 
 function generateCSV(transactions) {
-  const headers = ['Transaction ID', 'Source', 'Order Type', 'Items', 'Total Price', 'Date'];
+  const headers = ['date', 'Transaction ID', 'Source', 'Order Type', 'Items', 'Total Price'];
   const rows = transactions.map(transaction => [
+    transaction.date,
     transaction.id,
     transaction.source === 'mobile' ? 'Mobile Order' : 'POS Sale',
     transaction.type,
     transaction.itemsString || (transaction.items ? transaction.items.map(item => `${item.name} x${item.quantity}`).join(', ') : 'No items'),
     transaction.totalPrice.toFixed(2),
-    transaction.date
   ]);
   
   const csvContent = [headers, ...rows]
