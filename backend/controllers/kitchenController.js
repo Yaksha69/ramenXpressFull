@@ -1,4 +1,5 @@
 const MobileOrder = require('../models/mobileOrder');
+const POSOrder = require('../models/posOrder');
 const Sales = require('../models/sales');
 const notificationController = require('./notificationController');
 
@@ -7,14 +8,13 @@ exports.getKitchenOrders = async (req, res) => {
     try {
         // Get mobile orders
         const mobileOrders = await MobileOrder.find({
-            status: { $in: ['pending', 'preparing'] }
+            status: { $in: ['accepted', 'preparing'] }
         }).populate('customerId').sort({ createdAt: 1 });
 
-        // Get POS sales with pending/preparing status
-        const posOrders = await Sales.find({
-            status: { $in: ['pending', 'preparing'] },
-            serviceType: { $in: ['dine-in', 'takeout'] }
-        }).populate('menuItem').sort({ date: 1 });
+        // Get POS orders with pending/preparing status
+        const posOrders = await POSOrder.find({
+            status: { $in: ['pending', 'preparing'] }
+        }).populate('items.menuItem').sort({ createdAt: 1 });
 
         // Combine and format for kitchen
         const kitchenOrders = [
@@ -36,12 +36,12 @@ exports.getKitchenOrders = async (req, res) => {
                 deliveryMethod: order.deliveryMethod,
                 notes: order.notes
             })),
-            ...posOrders.map(sale => ({
-                id: sale._id,
-                orderId: sale.orderID,
+            ...posOrders.map(order => ({
+                id: order._id,
+                orderId: order.orderID,
                 type: 'pos',
-                status: sale.status,
-                items: sale.items && sale.items.length > 0 ? sale.items.map(item => ({
+                status: order.status,
+                items: order.items.map(item => ({
                     menuItem: { 
                         name: item.menuItemName,
                         price: item.price
@@ -52,21 +52,10 @@ exports.getKitchenOrders = async (req, res) => {
                         price: addon.price
                     })),
                     removedIngredients: item.removedIngredients || []
-                })) : [{
-                    menuItem: { 
-                        name: sale.menuItemName,
-                        price: sale.price
-                    },
-                    quantity: sale.quantity,
-                    selectedAddOns: sale.addOns.map(addon => ({
-                        name: addon.menuItemName,
-                        price: addon.price
-                    })),
-                    removedIngredients: sale.removedIngredients || []
-                }],
+                })),
                 customerName: 'POS Customer',
-                orderTime: sale.date,
-                serviceType: sale.serviceType
+                orderTime: order.createdAt,
+                serviceType: order.serviceType
             }))
         ];
 
@@ -137,14 +126,40 @@ exports.updateOrderStatus = async (req, res) => {
             return res.json({ success: true, order: mobileOrder });
         }
 
-        // Try POS sale
-        const posOrder = await Sales.findOneAndUpdate(
+        // Try POS order
+        const posOrder = await POSOrder.findOneAndUpdate(
             { orderID: orderId },
             { status },
             { new: true }
         );
 
         if (posOrder) {
+            // If order is marked as ready, create sales record
+            if (status === 'ready') {
+                try {
+                    const salesRecord = new Sales({
+                        orderID: posOrder.orderID,
+                        items: posOrder.items,
+                        paymentMethod: posOrder.paymentMethod,
+                        serviceType: posOrder.serviceType,
+                        totalAmount: posOrder.totalAmount,
+                        status: 'ready',
+                        // Keep the original fields for backward compatibility
+                        menuItem: posOrder.items[0]?.menuItem,
+                        menuItemName: posOrder.items[0]?.menuItemName,
+                        quantity: posOrder.items.reduce((sum, item) => sum + item.quantity, 0),
+                        price: posOrder.items[0]?.price,
+                        addOns: posOrder.items[0]?.addOns || [],
+                        removedIngredients: posOrder.items[0]?.removedIngredients || []
+                    });
+                    
+                    await salesRecord.save();
+                    console.log(`Created sales record for POS order ${posOrder.orderID} when marked as ready`);
+                } catch (salesError) {
+                    console.error('Failed to create sales record for POS order:', salesError);
+                }
+            }
+
             // Create notification for POS order status update
             try {
                 const notification = await notificationController.createStatusUpdateNotification({

@@ -25,7 +25,7 @@ const mobileOrderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ['pending', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
+    enum: ['pending', 'accepted', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
     default: 'pending'
   },
   orderDate: { 

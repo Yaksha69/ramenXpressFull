@@ -118,8 +118,31 @@
                     <span class="badge bg-dark ms-2" id="preparingBadge">0</span>
                   </h6>
                 </div>
-                <div class="card-body p-2" id="preparingOrders">
-                  <!-- Orders will be loaded here -->
+                <div class="card-body p-2">
+                  <div class="row g-2">
+                    <!-- POS Orders Column -->
+                    <div class="col-6">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-cash-register me-2 text-primary"></i>
+                        <h6 class="mb-0 text-primary">POS Orders</h6>
+                        <span class="badge bg-primary ms-2" id="posPreparingBadge">0</span>
+                      </div>
+                      <div id="posPreparingOrders" class="d-flex flex-column gap-2">
+                        <!-- POS orders will be loaded here -->
+                      </div>
+                    </div>
+                    <!-- Mobile Orders Column -->
+                    <div class="col-6">
+                      <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-mobile-alt me-2 text-success"></i>
+                        <h6 class="mb-0 text-success">Mobile Orders</h6>
+                        <span class="badge bg-success ms-2" id="mobilePreparingBadge">0</span>
+                      </div>
+                      <div id="mobilePreparingOrders" class="d-flex flex-column gap-2">
+                        <!-- Mobile orders will be loaded here -->
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

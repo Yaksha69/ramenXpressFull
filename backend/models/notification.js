@@ -25,7 +25,7 @@ const notificationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
+    enum: ['pending', 'accepted', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'cancelled'],
     required: false
   },
   customerName: {

@@ -248,7 +248,6 @@ function displayOrders(orders) {
         const paymentBadge = getPaymentBadge(paymentStatus);
         const row = document.createElement("tr");
         const customerName = getCustomerDisplayName(order);
-        const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
         row.setAttribute('data-order-id', order._id);
         row.innerHTML = `
             <td>#${order.orderId || order._id}</td>
@@ -259,7 +258,7 @@ function displayOrders(orders) {
             <td class="status-cell">${statusBadge}</td>
             <td>
                 <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
-                <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
+                ${getActionButton(order)}
             </td>
         `;
         tbody.appendChild(row);
@@ -295,7 +294,6 @@ function displayOrders(orders) {
             const paymentBadge = getPaymentBadge(paymentStatus);
             const row = document.createElement("tr");
             const customerName = getCustomerDisplayName(order);
-            const isUpdateDisabled = order.status === 'delivered' || order.status === 'cancelled';
             row.setAttribute('data-order-id', order._id);
             row.innerHTML = `
                 <td>#${order.orderId || order._id}</td>
@@ -306,7 +304,7 @@ function displayOrders(orders) {
                 <td class="status-cell">${statusBadge}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order._id}')">View</button>
-                    <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus('${order._id}')" ${isUpdateDisabled ? 'disabled' : ''}>Update</button>
+                    ${getActionButton(order)}
                 </td>
             `;
             tbody.appendChild(row);
@@ -352,10 +350,11 @@ async function loadMobileOrders() {
     }
 }
 
-// Status badge - Updated to include out-for-delivery
+// Status badge - Updated to include accepted status
 function getStatusBadge(status) {
     const map = {
         pending: '<span class="badge bg-secondary">Pending</span>',
+        accepted: '<span class="badge bg-primary">Accepted</span>',
         preparing: '<span class="badge bg-warning text-dark">Preparing</span>',
         ready: '<span class="badge bg-info">Ready</span>',
         'out-for-delivery': '<span class="badge bg-primary">Out for Delivery</span>',
@@ -405,6 +404,93 @@ function getCustomerDisplayName(order) {
     // If no customer data found, return a default
     return 'Customer';
 }
+
+// Helper function to determine the correct action button based on order status
+function getActionButton(order) {
+    const isCompleted = order.status === 'delivered' || order.status === 'cancelled';
+    
+    if (isCompleted) {
+        return `<button class="btn btn-sm btn-outline-secondary" disabled>Completed</button>`;
+    }
+    
+    switch (order.status) {
+        case 'pending':
+            return `<button class="btn btn-sm btn-success" onclick="acceptOrder('${order._id}')">Accept</button>`;
+        case 'ready':
+            return `<button class="btn btn-sm btn-primary" onclick="markOutForDelivery('${order._id}')">Out for Delivery</button>`;
+        case 'accepted':
+            return `<button class="btn btn-sm btn-outline-warning" disabled>Sent to Kitchen</button>`;
+        case 'preparing':
+            return `<button class="btn btn-sm btn-outline-info" disabled>Being Prepared</button>`;
+        case 'out-for-delivery':
+            return `<button class="btn btn-sm btn-success" onclick="markAsDelivered('${order._id}')">Mark Delivered</button>`;
+        default:
+            return `<button class="btn btn-sm btn-outline-secondary" disabled>No Action</button>`;
+    }
+}
+
+// Order acceptance function
+window.acceptOrder = async function(orderId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/mobile-orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ status: 'accepted' })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        await loadMobileOrders();
+        showSuccessModal('Order accepted and sent to kitchen!', 'accepted');
+    } catch (error) {
+        showGlobalNotification('Failed to accept order.', 'error');
+    }
+};
+
+// Mark order as out for delivery
+window.markOutForDelivery = async function(orderId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/mobile-orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ status: 'out-for-delivery' })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        await loadMobileOrders();
+        showSuccessModal('Order marked as out for delivery!', 'out-for-delivery');
+    } catch (error) {
+        showGlobalNotification('Failed to update order status.', 'error');
+    }
+};
+
+// Mark order as delivered
+window.markAsDelivered = async function(orderId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/mobile-orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ status: 'delivered' })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        await loadMobileOrders();
+        showSuccessModal('Order marked as delivered!', 'delivered');
+    } catch (error) {
+        showGlobalNotification('Failed to update order status.', 'error');
+    }
+};
 
 // Use global notification functions
 // These functions are now provided by globalNotifications.js

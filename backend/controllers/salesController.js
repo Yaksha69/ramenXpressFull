@@ -1,4 +1,5 @@
 const Sales = require('../models/sales');
+const POSOrder = require('../models/posOrder');
 const Menu = require('../models/menu');
 const Inventory = require('../models/inventory');
 const Counter = require('../models/counter');
@@ -522,25 +523,18 @@ exports.createMultipleSales = async (req, res) => {
             });
         }
         
-        // Create a single sales document with all items
-        const sale = new Sales({
+        // Create a POS order document (not sales record yet)
+        const posOrder = new POSOrder({
             orderID,
             items: processedItems, // Store all items in a single document
             paymentMethod,
             serviceType,
             totalAmount: totalOrderAmount,
-            status: 'pending',
-            // Keep the original fields for backward compatibility
-            menuItem: processedItems[0]?.menuItem,
-            menuItemName: processedItems[0]?.menuItemName,
-            quantity: processedItems.reduce((sum, item) => sum + item.quantity, 0),
-            price: processedItems[0]?.price,
-            addOns: processedItems[0]?.addOns || [],
-            removedIngredients: processedItems[0]?.removedIngredients || []
+            status: 'pending'
         });
         
-        await sale.save();
-        console.log(`Created single sales document with ${processedItems.length} items for order ${orderID}`);
+        await posOrder.save();
+        console.log(`Created POS order with ${processedItems.length} items for order ${orderID}`);
         
         // Emit real-time update to kitchen
         req.app.get('io').emit('newOrder', {
@@ -559,7 +553,7 @@ exports.createMultipleSales = async (req, res) => {
         
         res.status(201).json({
             orderID,
-            sale,
+            posOrder,
             totalItems: processedItems.length,
             totalAmount: totalOrderAmount,
             message: `Successfully created order ${orderID} with ${processedItems.length} items`

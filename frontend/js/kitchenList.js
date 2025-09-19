@@ -26,36 +26,54 @@ async function loadKitchenOrders() {
 
 // Display orders in kitchen format
 function displayOrders() {
-  const pendingOrders = kitchenOrders.filter(order => order.status === 'pending');
+  // Show both 'accepted' (mobile) and 'pending' (POS) orders as pending
+  const pendingOrders = kitchenOrders.filter(order => 
+    order.status === 'accepted' || order.status === 'pending'
+  );
   const preparingOrders = kitchenOrders.filter(order => order.status === 'preparing');
   
+  // Separate preparing orders by type
+  const posPreparingOrders = preparingOrders.filter(order => order.type === 'pos');
+  const mobilePreparingOrders = preparingOrders.filter(order => order.type === 'mobile');
+  
   displayOrderList('pendingOrders', pendingOrders);
-  displayOrderList('preparingOrders', preparingOrders);
+  displayOrderList('posPreparingOrders', posPreparingOrders);
+  displayOrderList('mobilePreparingOrders', mobilePreparingOrders);
   
   // Update counters
   const pendingCountEl = document.getElementById('pendingCount');
   const preparingCountEl = document.getElementById('preparingCount');
   const pendingBadgeEl = document.getElementById('pendingBadge');
   const preparingBadgeEl = document.getElementById('preparingBadge');
+  const posPreparingBadgeEl = document.getElementById('posPreparingBadge');
+  const mobilePreparingBadgeEl = document.getElementById('mobilePreparingBadge');
   
   if (pendingCountEl) pendingCountEl.textContent = pendingOrders.length;
   if (preparingCountEl) preparingCountEl.textContent = preparingOrders.length;
   if (pendingBadgeEl) pendingBadgeEl.textContent = pendingOrders.length;
   if (preparingBadgeEl) preparingBadgeEl.textContent = preparingOrders.length;
+  if (posPreparingBadgeEl) posPreparingBadgeEl.textContent = posPreparingOrders.length;
+  if (mobilePreparingBadgeEl) mobilePreparingBadgeEl.textContent = mobilePreparingOrders.length;
 }
 
 // Display order list
 function displayOrderList(containerId, orders) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
-  // Make container wrap small cards nicely
-  container.className = 'd-flex flex-wrap gap-2';
+  
+  // For the new column layout, use flex-column instead of flex-wrap
+  if (containerId === 'posPreparingOrders' || containerId === 'mobilePreparingOrders') {
+    container.className = 'd-flex flex-column gap-2';
+  } else {
+    // For pending orders, keep the original wrap layout
+    container.className = 'd-flex flex-wrap gap-2';
+  }
   
   if (orders.length === 0) {
     container.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-clipboard-list"></i>
-        <p>No orders</p>
+      <div class="empty-state text-center py-3">
+        <i class="fas fa-clipboard-list text-muted"></i>
+        <p class="text-muted small mb-0">No orders</p>
       </div>
     `;
     return;
@@ -71,7 +89,19 @@ function displayOrderList(containerId, orders) {
 function createOrderCard(order) {
   const card = document.createElement('div');
   card.className = 'card shadow-sm border-0';
-  card.style.width = '18rem';
+  
+  // Make cards more compact for column layout
+  const isColumnLayout = order.status === 'preparing';
+  const isPendingSection = order.status === 'pending' || order.status === 'accepted';
+  
+  if (isColumnLayout) {
+    card.style.width = '100%';
+    card.style.maxWidth = '100%';
+  } else if (isPendingSection) {
+    card.style.width = '18rem';
+  } else {
+    card.style.width = '18rem';
+  }
   
   // Calculate total order amount
   const totalAmount = order.items.reduce((sum, item) => {
@@ -82,11 +112,22 @@ function createOrderCard(order) {
   
   const itemsCount = order.items?.length || 0;
   const firstItem = order.items && order.items[0] ? `${order.items[0].menuItem.name} x${order.items[0].quantity}` : 'No items';
+  
+  // Add type indicator
+  const typeIcon = order.type === 'mobile' ? 'fas fa-mobile-alt text-success' : 'fas fa-cash-register text-primary';
+  const typeBadge = order.type === 'mobile' ? 'bg-success' : 'bg-primary';
+  
   card.innerHTML = `
     <div class="card-body p-3">
       <div class="d-flex justify-content-between align-items-center mb-1">
-        <h6 class="card-title mb-0">#${order.orderId}</h6>
-        <span class="badge ${order.status === 'pending' ? 'bg-warning text-dark' : 'bg-info text-white'}">${order.status}</span>
+        <div class="d-flex align-items-center">
+          <i class="${typeIcon} me-2"></i>
+          <h6 class="card-title mb-0">#${order.orderId}</h6>
+        </div>
+        <div class="d-flex align-items-center gap-1">
+          <span class="badge ${typeBadge} text-white small">${order.type.toUpperCase()}</span>
+          <span class="badge ${order.status === 'accepted' || order.status === 'pending' ? 'bg-warning text-dark' : 'bg-info text-white'}">${order.status === 'accepted' || order.status === 'pending' ? 'pending' : order.status}</span>
+        </div>
       </div>
       <div class="text-muted small mb-2">
         ${order.customerName || 'Walk-in'} • ${new Date(order.orderTime).toLocaleTimeString()} • ${itemsCount} item${itemsCount!==1?'s':''}
@@ -100,7 +141,7 @@ function createOrderCard(order) {
           <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails('${order.id}')" title="View">
             <i class="fas fa-eye"></i>
           </button>
-          ${order.status === 'pending' ? `
+          ${order.status === 'accepted' || order.status === 'pending' ? `
             <button class="btn btn-sm btn-warning" onclick="updateOrderStatus('${order.id}', 'preparing')" title="Start">
               <i class="fas fa-play"></i>
             </button>
