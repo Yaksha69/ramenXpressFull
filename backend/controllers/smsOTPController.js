@@ -87,11 +87,24 @@ exports.verifyPhoneOTP = async (req, res) => {
     if (result.success) {
       const formattedPhoneNumber = smsService.formatPhoneNumber(phoneNumber);
       
-      // Update customer phone verification status if customer exists
-      const customer = await Customer.findOne({ phoneNumber: formattedPhoneNumber });
-      if (customer) {
-        customer.phoneVerified = true;
-        await customer.save();
+      // Update customer phone verification status and phone number
+      let customer = null;
+      
+      if (req.customerId) {
+        // Authenticated user - update their phone number and verification status
+        customer = await Customer.findById(req.customerId);
+        if (customer) {
+          customer.phoneNumber = formattedPhoneNumber;
+          customer.phoneVerified = true;
+          await customer.save();
+        }
+      } else {
+        // Non-authenticated (registration flow) - find by phone number
+        customer = await Customer.findOne({ phoneNumber: formattedPhoneNumber });
+        if (customer) {
+          customer.phoneVerified = true;
+          await customer.save();
+        }
       }
 
       res.json({

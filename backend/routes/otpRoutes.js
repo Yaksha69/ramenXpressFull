@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const emailOTPController = require('../controllers/emailOTPController');
 const smsOTPController = require('../controllers/smsOTPController');
+const { customerAuthMiddleware } = require('../middleware/customerAuthMiddleware');
 
 // Email OTP routes
 // Send email OTP for registration
@@ -20,8 +21,8 @@ router.post('/resend-otp', emailOTPController.resendOTP);
 // Send SMS OTP for phone number verification (registration)
 router.post('/send-phone-otp', smsOTPController.sendPhoneOTP);
 
-// Verify SMS OTP for phone number verification
-router.post('/verify-phone-otp', smsOTPController.verifyPhoneOTP);
+// Verify SMS OTP for phone number verification (requires authentication for profile updates)
+router.post('/verify-phone-otp', customerAuthMiddleware, smsOTPController.verifyPhoneOTP);
 
 // Send SMS OTP for login
 router.post('/send-login-phone-otp', smsOTPController.sendLoginPhoneOTP);

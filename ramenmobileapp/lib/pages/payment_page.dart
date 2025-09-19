@@ -4,11 +4,13 @@ import '../services/cart_service.dart';
 import '../services/order_service.dart';
 import '../services/api_service.dart';
 import '../services/menu_service.dart';
+import '../services/notification_service.dart';
 import '../models/cart_item.dart';
 import '../models/menu_item.dart';
 import '../models/delivery_address.dart';
 import '../models/payment_method.dart';
 import 'edit_payment_method_page.dart';
+import 'phone_verification_page.dart';
 
 class PaymentPage extends StatefulWidget {
   final Map<String, dynamic>? orderData;
@@ -167,12 +169,7 @@ class _PaymentPageState extends State<PaymentPage> {
       deliveryAddresses = [];
       // Show user-friendly error message
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load delivery addresses: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        NotificationService.showWarning(context, 'Failed to load delivery addresses: $e');
       }
     }
   }
@@ -1354,25 +1351,64 @@ class _PaymentPageState extends State<PaymentPage> {
                     child: ElevatedButton(
                       onPressed: () async {
                         try {
-                          // Only require delivery address for delivery orders, not pickup
-                          if (selectedDeliveryMethod == 'Delivery' && selectedAddress == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please select a delivery address'),
-                                backgroundColor: Colors.red,
+                          // Check if user's phone number is verified
+                          final userProfile = await _apiService.getCustomerProfile();
+                          final profileData = userProfile['data'] ?? userProfile;
+                          if (profileData['phoneVerified'] != true) {
+                            // Show dialog asking user to verify phone number
+                            final shouldVerify = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Phone Verification Required'),
+                                content: const Text(
+                                  'You need to verify your phone number before placing an order. This helps us contact you about your order status.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text('Verify Now'),
+                                  ),
+                                ],
                               ),
                             );
+                            
+                            if (shouldVerify == true) {
+                              // Navigate to phone verification
+                              final phoneNumber = userProfile['phoneNumber'] ?? '';
+                              if (phoneNumber.isNotEmpty) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PhoneVerificationPage(
+                                      phoneNumber: phoneNumber,
+                                      isLogin: false,
+                                      onVerificationSuccess: () {
+                                        // Refresh the page after verification
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                NotificationService.showError(context, 'Please update your phone number in profile first');
+                              }
+                            }
+                            return;
+                          }
+
+                          // Only require delivery address for delivery orders, not pickup
+                          if (selectedDeliveryMethod == 'Delivery' && selectedAddress == null) {
+                            NotificationService.showError(context, 'Please select a delivery address');
                             return;
                           }
 
                           // Validate payment method
                           if (selectedPaymentMethod == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please select a payment method'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                            NotificationService.showError(context, 'Please select a payment method');
                             return;
                           }
 
@@ -1431,12 +1467,7 @@ class _PaymentPageState extends State<PaymentPage> {
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error processing order: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                            NotificationService.showError(context, 'Error processing order: $e');
                           }
                         }
                       },

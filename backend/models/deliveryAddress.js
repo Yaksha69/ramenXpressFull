@@ -7,6 +7,22 @@ const deliveryAddressSchema = new mongoose.Schema({
     ref: 'Customer',
     required: true
   },
+  recipientName: {
+    type: String,
+    required: [true, 'Recipient full name is required'],
+    trim: true
+  },
+  recipientMobile: {
+    type: String,
+    required: [true, 'Recipient mobile number is required'],
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return /^[0-9+\-\s()]+$/.test(v);
+      },
+      message: 'Please enter a valid mobile number'
+    }
+  },
   street: {
     type: String,
     required: [true, 'Street address is required'],
@@ -32,6 +48,18 @@ const deliveryAddressSchema = new mongoose.Schema({
     required: [true, 'Zip code is required'],
     trim: true
   },
+  latitude: {
+    type: Number,
+    required: false,
+    min: -90,
+    max: 90
+  },
+  longitude: {
+    type: Number,
+    required: false,
+    min: -180,
+    max: 180
+  },
   isDefault: {
     type: Boolean,
     default: false
@@ -53,6 +81,8 @@ deliveryAddressSchema.virtual('fullAddress').get(function() {
 deliveryAddressSchema.methods.getAddressSummary = function() {
   return {
     id: this._id,
+    recipientName: this.recipientName,
+    recipientMobile: this.recipientMobile,
     street: this.street,
     barangay: this.barangay,
     municipality: this.municipality,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -46,27 +47,24 @@ class _SignupPageState extends State<SignupPage> {
           _lastNameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text,
+          phoneNumber: _phoneController.text.trim(),
         );
         
         if (mounted) {
-          // Navigate to email verification 
+          // Navigate to email verification first, then phone verification
           Navigator.pushNamed(
             context, 
             '/email-verification',
             arguments: {
               'email': _emailController.text.trim(),
               'purpose': 'registration',
+              'phoneNumber': _phoneController.text.trim(),
             },
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Registration failed: ${e.toString().replaceAll('Exception: ', '')}'), 
-              backgroundColor: Colors.red
-            ),
-          );
+          NotificationService.showError(context, 'Registration failed: ${e.toString().replaceAll('Exception: ', '')}');
         }
       } finally {
         if (mounted) {
