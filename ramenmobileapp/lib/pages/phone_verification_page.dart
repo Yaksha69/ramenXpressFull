@@ -1,44 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import '../services/api_service.dart';
+import '../services/otp_service.dart';
 import '../services/notification_service.dart';
-import 'phone_verification_page.dart';
 
-class EmailVerificationPage extends StatefulWidget {
-  final String email;
-  final String purpose; // 'registration' or 'login'
-  final String? phoneNumber; // Optional phone number for registration flow
+class PhoneVerificationPage extends StatefulWidget {
+  final String phoneNumber;
+  final bool isLogin;
+  final VoidCallback? onVerificationSuccess;
 
-  const EmailVerificationPage({
+  const PhoneVerificationPage({
     super.key,
-    required this.email,
-    required this.purpose,
-    this.phoneNumber,
+    required this.phoneNumber,
+    this.isLogin = false,
+    this.onVerificationSuccess,
   });
 
   @override
-  State<EmailVerificationPage> createState() => _EmailVerificationPageState();
+  State<PhoneVerificationPage> createState() => _PhoneVerificationPageState();
 }
 
-class _EmailVerificationPageState extends State<EmailVerificationPage> {
-  final List<TextEditingController> _controllers = List.generate(6, (index) => TextEditingController());
+class _PhoneVerificationPageState extends State<PhoneVerificationPage> {
+  final List<TextEditingController> _otpControllers = List.generate(6, (index) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  
   bool _isLoading = false;
   bool _isResending = false;
+  String _errorMessage = '';
   int _resendCountdown = 0;
   Timer? _timer;
-  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _startResendCountdown();
+    _sendOTP();
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
+    for (var controller in _otpControllers) {
       controller.dispose();
     }
     for (var focusNode in _focusNodes) {
@@ -48,53 +48,90 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     super.dispose();
   }
 
-  void _startResendCountdown() {
+  void _sendOTP() async {
+    if (!mounted) return;
+    
     setState(() {
-      _resendCountdown = 60; // 60 seconds countdown
+      _isResending = true;
+      _errorMessage = '';
+    });
+
+    try {
+      Map<String, dynamic> result;
+      if (widget.isLogin) {
+        result = await OTPService.sendLoginPhoneOTP(widget.phoneNumber);
+      } else {
+        result = await OTPService.sendPhoneOTP(widget.phoneNumber);
+      }
+
+      if (!mounted) return;
+
+      if (result['success']) {
+        _startResendCountdown();
+        if (mounted) {
+          NotificationService.showSuccess(
+            context,
+            'Verification code sent to ${widget.phoneNumber}',
+          );
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = result['message'];
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to send verification code. Please try again.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResending = false;
+        });
+      }
+    }
+  }
+
+  void _startResendCountdown() {
+    if (!mounted) return;
+    
+    setState(() {
+      _resendCountdown = 60;
     });
     
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendCountdown > 0) {
-        setState(() {
-          _resendCountdown--;
-        });
-      } else {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      setState(() {
+        _resendCountdown--;
+      });
+      
+      if (_resendCountdown <= 0) {
         timer.cancel();
       }
     });
   }
 
-  String get _otpCode {
-    return _controllers.map((controller) => controller.text).join();
-  }
-
-  bool get _isOtpComplete {
-    return _otpCode.length == 6;
-  }
-
-  void _onOtpChanged(int index, String value) {
-    setState(() {
-      _errorMessage = '';
-    });
-
-    if (value.isNotEmpty && index < 5) {
-      _focusNodes[index + 1].requestFocus();
-    }
-
-    // Auto-verify when all 6 digits are entered
-    if (_isOtpComplete) {
-      _verifyOtp();
-    }
-  }
-
-
-  Future<void> _verifyOtp() async {
-    if (!_isOtpComplete) {
-      setState(() {
-        _errorMessage = 'Please enter the complete 6-digit code';
-      });
+  void _verifyOTP() async {
+    String otpCode = _otpControllers.map((controller) => controller.text).join();
+    
+    if (otpCode.length != 6) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Please enter the complete 6-digit code';
+        });
+      }
       return;
     }
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -102,52 +139,49 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     });
 
     try {
-      final api = ApiService();
-      
-      if (widget.purpose == 'registration') {
-        // For registration: verify OTP and proceed to phone verification
-        await api.verifyOTP(widget.email, _otpCode, 'registration');
-        
+      Map<String, dynamic> result;
+      if (widget.isLogin) {
+        result = await OTPService.verifyLoginPhoneOTP(widget.phoneNumber, otpCode);
+      } else {
+        result = await OTPService.verifyPhoneOTP(widget.phoneNumber, otpCode);
+      }
+
+      if (!mounted) return;
+
+      if (result['success']) {
         if (mounted) {
-          if (widget.phoneNumber != null) {
-            // Navigate to phone verification
-            NotificationService.showSuccess(context, 'Email verified! Now verify your phone number.');
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PhoneVerificationPage(
-                  phoneNumber: widget.phoneNumber!,
-                  isLogin: false,
-                  onVerificationSuccess: () {
-                    // After phone verification, go to login
-                    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-                  },
-                ),
-              ),
-            );
-          } else {
-            // No phone number provided, complete registration
-            NotificationService.showSuccess(context, 'Email verified! Registration completed successfully.');
-            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-          }
+          NotificationService.showSuccess(
+            context,
+            'Phone number verified successfully! 📱✅',
+          );
+          
+          // Call success callback if provided
+          widget.onVerificationSuccess?.call();
+          
+          // Navigate back or to next screen
+          Navigator.of(context).pop(true);
         }
       } else {
-        // For login: verify OTP then proceed to login
-        await api.verifyOTP(widget.email, _otpCode, 'login');
-        
         if (mounted) {
-          NotificationService.showSuccess(context, 'Email verified! Logging you in...');
-          Navigator.pushReplacementNamed(context, '/home');
+          setState(() {
+            _errorMessage = result['message'];
+          });
+          
+          // Clear the OTP fields on error
+          for (var controller in _otpControllers) {
+            controller.clear();
+          }
+          _focusNodes[0].requestFocus();
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = 'Verification failed. Please try again.';
         });
         
         // Clear the OTP fields on error
-        for (var controller in _controllers) {
+        for (var controller in _otpControllers) {
           controller.clear();
         }
         _focusNodes[0].requestFocus();
@@ -161,34 +195,21 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
     }
   }
 
-  Future<void> _resendOtp() async {
-    if (_resendCountdown > 0) return;
-
+  void _onOTPChanged(String value, int index) {
+    if (!mounted) return;
+    
     setState(() {
-      _isResending = true;
       _errorMessage = '';
     });
 
-    try {
-      final api = ApiService();
-      await api.resendOTP(widget.email, widget.purpose);
-      
-      if (mounted) {
-        NotificationService.showSuccess(context, 'Verification code resent to your email');
-        _startResendCountdown();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isResending = false;
-        });
-      }
+    if (value.isNotEmpty && index < 5) {
+      _focusNodes[index + 1].requestFocus();
+    }
+
+    // Auto-verify when all 6 digits are entered
+    String otpCode = _otpControllers.map((controller) => controller.text).join();
+    if (otpCode.length == 6) {
+      _verifyOTP();
     }
   }
 
@@ -215,7 +236,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               
               const SizedBox(height: 20),
               
-              // Email verification icon
+              // Phone verification icon
               Container(
                 width: 120,
                 height: 120,
@@ -224,7 +245,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.email_outlined,
+                  Icons.sms_outlined,
                   size: 60,
                   color: Color(0xFFD32D43),
                 ),
@@ -234,7 +255,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               
               // Title
               const Text(
-                'Verify Your Email',
+                'Verify Your Phone',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -257,7 +278,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               const SizedBox(height: 8),
               
               Text(
-                widget.email,
+                widget.phoneNumber,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -276,7 +297,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                     width: 45,
                     height: 55,
                     child: TextFormField(
-                      controller: _controllers[index],
+                      controller: _otpControllers[index],
                       focusNode: _focusNodes[index],
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
@@ -310,10 +331,10 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                       ],
-                      onChanged: (value) => _onOtpChanged(index, value),
+                      onChanged: (value) => _onOTPChanged(value, index),
                       onTap: () {
-                        _controllers[index].selection = TextSelection.fromPosition(
-                          TextPosition(offset: _controllers[index].text.length),
+                        _otpControllers[index].selection = TextSelection.fromPosition(
+                          TextPosition(offset: _otpControllers[index].text.length),
                         );
                       },
                     ),
@@ -355,7 +376,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading || !_isOtpComplete ? null : _verifyOtp,
+                  onPressed: _isLoading ? null : _verifyOTP,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD32D43),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -374,7 +395,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                           ),
                         )
                       : const Text(
-                          'Verify Email',
+                          'Verify Phone',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -404,7 +425,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
                     )
                   else
                     TextButton(
-                      onPressed: _isResending ? null : _resendOtp,
+                      onPressed: _isResending ? null : _sendOTP,
                       child: _isResending
                           ? const SizedBox(
                               width: 16,

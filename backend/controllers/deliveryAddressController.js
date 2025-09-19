@@ -29,13 +29,13 @@ exports.getDeliveryAddresses = async (req, res) => {
 exports.addDeliveryAddress = async (req, res) => {
   try {
     const customerId = req.customerId;
-    const { street, barangay, municipality, province, zipCode, isDefault } = req.body;
+    const { recipientName, recipientMobile, street, barangay, municipality, province, zipCode, isDefault } = req.body;
 
     // Validate required fields
-    if (!street || !barangay || !municipality || !province || !zipCode) {
+    if (!recipientName || !recipientMobile || !street || !barangay || !municipality || !province || !zipCode) {
       return res.status(400).json({
         success: false,
-        message: 'Street, barangay, municipality, province, and zip code are required'
+        message: 'Recipient name, mobile number, street, barangay, municipality, province, and zip code are required'
       });
     }
 
@@ -50,6 +50,8 @@ exports.addDeliveryAddress = async (req, res) => {
     // Create new delivery address
     const deliveryAddress = new DeliveryAddress({
       customerId,
+      recipientName,
+      recipientMobile,
       street,
       barangay,
       municipality,
@@ -81,7 +83,7 @@ exports.updateDeliveryAddress = async (req, res) => {
   try {
     const customerId = req.customerId;
     const { addressId } = req.params;
-    const { street, barangay, municipality, province, zipCode, isDefault } = req.body;
+    const { recipientName, recipientMobile, street, barangay, municipality, province, zipCode, isDefault } = req.body;
 
     const deliveryAddress = await DeliveryAddress.findOne({
       _id: addressId,
@@ -104,6 +106,8 @@ exports.updateDeliveryAddress = async (req, res) => {
     }
 
     // Update fields
+    if (recipientName) deliveryAddress.recipientName = recipientName;
+    if (recipientMobile) deliveryAddress.recipientMobile = recipientMobile;
     if (street) deliveryAddress.street = street;
     if (barangay) deliveryAddress.barangay = barangay;
     if (municipality) deliveryAddress.municipality = municipality;

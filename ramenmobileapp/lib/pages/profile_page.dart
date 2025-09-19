@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'edit_profile_page.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
+import 'phone_verification_page.dart';
 
 
 class ProfilePage extends StatefulWidget {
@@ -18,6 +20,7 @@ class _ProfilePageState extends State<ProfilePage> {
     'profileImage': 'assets/profilesgg.png',
   };
   bool isLoading = true;
+  bool phoneVerified = false;
   final ApiService _apiService = ApiService();
 
   @override
@@ -39,6 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
           'phone': customerData['phone'] ?? 'Not provided',
           'profileImage': customerData['profileImage'] ?? 'assets/profilesgg.png',
         };
+        phoneVerified = customerData['phoneVerified'] ?? false;
         isLoading = false;
       });
     } catch (e) {
@@ -54,6 +58,8 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     }
   }
+
+
 
   Widget _buildSection(String title, List<Widget> children) {
     return Container(
@@ -349,14 +355,94 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           if (profile['phone']! != 'Not provided') ...[
                             const SizedBox(height: 2),
-                            Text(
-                              profile['phone']!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
-                              ),
-                              textAlign: TextAlign.center,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  profile['phone']!,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: phoneVerified ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: phoneVerified ? Colors.green : Colors.orange,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        phoneVerified ? Icons.verified : Icons.warning,
+                                        size: 12,
+                                        color: phoneVerified ? Colors.green : Colors.orange,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        phoneVerified ? 'Verified' : 'Unverified',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          color: phoneVerified ? Colors.green : Colors.orange,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
+                            if (!phoneVerified) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => PhoneVerificationPage(
+                                          phoneNumber: profile['phone']!,
+                                          isLogin: false,
+                                          onVerificationSuccess: () {
+                                            // Refresh profile after verification
+                                            _loadUserProfile();
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.orange,
+                                    side: const BorderSide(color: Colors.orange),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.sms, size: 16),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Verify Phone Number',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                           
                           const SizedBox(height: 20),
@@ -373,9 +459,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 );
                                 if (updatedProfile != null) {
-                                  setState(() {
-                                    profile = Map<String, String>.from(updatedProfile);
-                                  });
+                                  // Reload the complete profile from backend to get updated verification status
+                                  await _loadUserProfile();
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -407,6 +492,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
+                  
                   // Quick Actions Section
                   _buildSection(
                     'Quick Actions',
@@ -441,9 +527,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           );
                           if (updatedProfile != null) {
-                            setState(() {
-                              profile = Map<String, String>.from(updatedProfile);
-                            });
+                            // Reload the complete profile from backend to get updated verification status
+                            await _loadUserProfile();
                           }
                         },
                         iconColor: const Color(0xFF9C27B0),
@@ -493,80 +578,25 @@ class _ProfilePageState extends State<ProfilePage> {
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ElevatedButton(
                       onPressed: () {
-                        showDialog(
+                        NotificationService.showConfirmDialog(
                           context: context,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            title: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFD32D43).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.logout,
-                                    color: Color(0xFFD32D43),
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Logout',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            content: const Text(
-                              'Are you sure you want to logout from your account?',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                ),
-                                child: Text(
-                                  'Cancel',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  final apiService = ApiService();
-                                  await apiService.logout();
-                                  
-                                  if (mounted) {
-                                    Navigator.pushReplacementNamed(context, '/login');
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFD32D43),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Logout',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
+                          title: 'Logout',
+                          message: 'Are you sure you want to logout?',
+                          confirmText: 'Logout',
+                          cancelText: 'Cancel',
+                          confirmColor: const Color(0xFFD32D43),
+                        ).then((shouldLogout) async {
+                          if (shouldLogout == true) {
+                            await _apiService.logout();
+                            if (mounted) {
+                              Navigator.pushNamedAndRemoveUntil(
+                                context,
+                                '/login',
+                                (route) => false,
+                              );
+                            }
+                          }
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class EditprofilePage extends StatefulWidget {
   final Map<String, String> initialProfile;
@@ -13,6 +17,8 @@ class _EditprofilePageState extends State<EditprofilePage> {
   late TextEditingController nameController;
   late TextEditingController emailController;
   late TextEditingController phoneController;
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -30,17 +36,150 @@ class _EditprofilePageState extends State<EditprofilePage> {
     super.dispose();
   }
 
-  void _saveProfile() {
-    final updatedProfile = {
-      'name': nameController.text,
-      'email': emailController.text,
-      'phone': phoneController.text,
-      'profileImage': widget.initialProfile['profileImage'] ?? '',
-    };
-    Navigator.pop(context, updatedProfile);
+  Future<void> _pickImage() async {
+    try {
+      // Show image source selection dialog
+      final ImageSource? source = await _showImageSourceDialog();
+      if (source == null) return;
+
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+        requestFullMetadata: false,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+        });
+        
+        NotificationService.showSuccess(
+          context,
+          'Profile photo selected! Save to update.',
+        );
+      }
+    } on PlatformException catch (e) {
+      String errorMessage = 'Failed to select image';
+      if (e.code == 'photo_access_denied') {
+        errorMessage = 'Photo access denied. Please enable gallery permissions in settings.';
+      } else if (e.code == 'camera_access_denied') {
+        errorMessage = 'Camera access denied. Please enable camera permissions in settings.';
+      } else {
+        errorMessage = 'Error: ${e.message ?? e.code}';
+      }
+      
+      NotificationService.showError(
+        context,
+        errorMessage,
+      );
+    } catch (e) {
+      NotificationService.showError(
+        context,
+        'Failed to select image: $e',
+      );
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Image Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _saveProfile() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final apiService = ApiService();
+      
+      // Parse the full name into first and last name
+      final fullName = nameController.text.trim();
+      final nameParts = fullName.split(' ');
+      final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      
+      // Prepare update data
+      final updateData = {
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': emailController.text.trim(),
+        'phone': phoneController.text.trim(),
+      };
+      
+      // Call backend API to update profile
+      final response = await apiService.updateCustomerProfile(updateData);
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      if (response['success'] == true) {
+        // Show success message
+        NotificationService.showSuccess(
+          context,
+          'Profile updated successfully! ✅',
+        );
+        
+        // Return updated profile data
+        final updatedProfile = {
+          'name': fullName,
+          'email': emailController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'profileImage': widget.initialProfile['profileImage'] ?? '',
+        };
+        
+        Navigator.pop(context, updatedProfile);
+      } else {
+        // Show error message
+        NotificationService.showError(
+          context,
+          response['message'] ?? 'Failed to update profile',
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.pop(context);
+      
+      // Show error message
+      NotificationService.showError(
+        context,
+        'Error updating profile: $e',
+      );
+    }
   }
 
   ImageProvider _getProfileImage() {
+    // If user selected a new image, show that
+    if (_selectedImage != null) {
+      return FileImage(_selectedImage!);
+    }
+    
     final imagePath = widget.initialProfile['profileImage'] ?? 'assets/profilesgg.png';
     final imageUrl = ApiService.getImageUrl(imagePath);
     final isNetwork = ApiService.isNetworkImage(imagePath);
@@ -207,58 +346,61 @@ class _EditprofilePageState extends State<EditprofilePage> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFE0E0E0),
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              spreadRadius: 0,
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFE0E0E0),
+                              width: 3,
                             ),
-                          ],
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                spreadRadius: 0,
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 57,
+                            backgroundImage: _getProfileImage(),
+                          ),
                         ),
-                        child: CircleAvatar(
-                          radius: 57,
-                          backgroundImage: _getProfileImage(),
-                        ),
-                      ),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFD32D43),
-                          border: Border.all(
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFD32D43),
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFD32D43).withOpacity(0.3),
+                                spreadRadius: 0,
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 18,
                             color: Colors.white,
-                            width: 3,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFD32D43).withOpacity(0.3),
-                              spreadRadius: 0,
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(

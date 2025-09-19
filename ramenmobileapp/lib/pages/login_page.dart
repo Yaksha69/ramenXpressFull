@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'email_verification_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -26,33 +27,15 @@ class _LoginPageState extends State<LoginPage> {
   void _showVerificationScreen(String email) async {
     final api = ApiService();
     
-    // Show loading indicator
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(width: 16),
-            Text('Sending verification code...'),
-          ],
-        ),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    // Show loading dialog
+    NotificationService.showLoadingDialog(context, message: 'Sending verification code...');
 
     try {
       // Send registration OTP for verification
       await api.sendRegistrationOTP(email);
       
-      // Clear any existing snackbars
-      ScaffoldMessenger.of(context).clearSnackBars();
+      // Hide loading dialog
+      NotificationService.hideLoadingDialog(context);
       
       // Navigate to verification screen using push instead of pushNamed
       if (mounted) {
@@ -67,16 +50,11 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-      // Clear loading snackbar
-      ScaffoldMessenger.of(context).clearSnackBars();
+      // Hide loading dialog
+      NotificationService.hideLoadingDialog(context);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send verification code: ${e.toString().replaceAll('Exception: ', '')}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        NotificationService.showError(context, 'Failed to send verification code: ${e.toString().replaceAll('Exception: ', '')}');
       }
     }
   }
@@ -108,40 +86,20 @@ class _LoginPageState extends State<LoginPage> {
               errorMessage.contains('requiresEmailVerification') ||
               errorMessage.contains('Email not verified')) {
             
-            // Show dialog asking if user wants to verify email
-            showDialog(
+            // Show question dialog asking if user wants to verify email
+            NotificationService.showQuestionDialog(
               context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  title: const Text('Email Not Verified'),
-                  content: const Text('Your email address needs to be verified before you can login. Would you like to verify it now?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final email = _emailController.text.trim();
-                        Navigator.of(context).pop(); // Close dialog first
-                        
-                        // Show verification screen directly
-                        _showVerificationScreen(email);
-                      },
-                      child: const Text('Verify Email'),
-                    ),
-                  ],
-                );
+              title: 'Email Not Verified',
+              message: 'Your email address needs to be verified before you can login. Would you like to verify it now?',
+              onOkPressed: () {
+                final email = _emailController.text.trim();
+                _showVerificationScreen(email);
               },
+              onCancelPressed: () {},
             );
           } else {
             // Show regular error message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Login failed: $errorMessage'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            NotificationService.showError(context, 'Login failed: $errorMessage');
           }
         }
       } finally {
@@ -243,11 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Forgot password feature coming soon!'),
-                        ),
-                      );
+                      NotificationService.showInfo(context, 'Forgot password feature coming soon!');
                     },
                     child: const Text('Forgot Password?'),
                   ),

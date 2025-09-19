@@ -20,7 +20,7 @@ class ApiService {
       // If testing on emulator, change this to:
       // - Android emulator: 'http://10.0.2.2:3000/api/v1'
       // - iOS simulator: 'http://localhost:3000/api/v1'
-      return 'http://192.168.0.105:3000/api/v1';
+      return 'http://192.168.0.106:3000/api/v1';
     } else {
       // Production mode - use hardcoded production URL
       return 'https://ramenb.onrender.com/api/v1';
@@ -123,14 +123,20 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> registerCustomer(String firstName, String lastName, String email, String password) async {
+  Future<Map<String, dynamic>> registerCustomer(String firstName, String lastName, String email, String password, {String? phoneNumber}) async {
     try {
-      final response = await _dio.post('/customers/register', data: {
+      final Map<String, dynamic> data = {
         'firstName': firstName,
         'lastName': lastName,
         'email': email,
         'password': password,
-      });
+      };
+      
+      if (phoneNumber != null && phoneNumber.isNotEmpty) {
+        data['phoneNumber'] = phoneNumber;
+      }
+      
+      final response = await _dio.post('/customers/register', data: data);
 
       if (response.statusCode == 201) {
         return response.data;
@@ -478,6 +484,18 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> updateCustomerProfile(Map<String, dynamic> profileData) async {
+    try {
+      final response = await _dio.put('/customers/profile', data: profileData);
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('Failed to update customer profile');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
   // Payment Methods API
   Future<List<PaymentMethod>> getPaymentMethods() async {
     try {
@@ -602,9 +620,20 @@ class ApiService {
 
   Future<void> deleteDeliveryAddress(String id) async {
     try {
-      final response = await _dio.delete('/delivery-addresses/delete/$id');
+      final response = await _dio.delete('/delivery-addresses/$id');
       if (response.statusCode != 200) {
         throw Exception('Failed to delete delivery address');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  Future<void> setDefaultDeliveryAddress(String id) async {
+    try {
+      final response = await _dio.put('/delivery-addresses/$id/default');
+      if (response.statusCode != 200) {
+        throw Exception('Failed to set default delivery address');
       }
     } on DioException catch (e) {
       throw _handleDioError(e);

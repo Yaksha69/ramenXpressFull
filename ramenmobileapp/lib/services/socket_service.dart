@@ -18,7 +18,7 @@ class SocketService {
     if (socket != null && socket!.connected) return;
     
     // Use localhost for development
-    String socketUrl = 'http://192.168.0.105:3000'; // Your computer's local IP
+    String socketUrl = 'http://192.168.0.106:3000'; // Your computer's local IP
     
     socket = IO.io(socketUrl, <String, dynamic>{
       'transports': ['websocket'],
@@ -105,12 +105,9 @@ class SocketService {
       // Still show in-app notification as fallback
       if (_currentContext != null) {
         final fallbackMessage = 'Order #$orderId status updated to $status';
-        ScaffoldMessenger.of(_currentContext!).showSnackBar(
-          SnackBar(
-            content: Text(fallbackMessage),
-            backgroundColor: Colors.blue,
-            duration: const Duration(seconds: 3),
-          ),
+        NotificationService.showInfo(
+          _currentContext!,
+          fallbackMessage,
         );
       }
     }

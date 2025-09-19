@@ -4,6 +4,7 @@ import '../widgets/delivery_animation.dart';
 import '../models/order.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
+import '../services/notification_service.dart';
 
 class OrderTrackingPage extends StatefulWidget {
   final String orderId;
@@ -131,11 +132,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       Navigator.of(context).pop();
       
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order cancelled successfully'),
-          backgroundColor: Colors.green,
-        ),
+      NotificationService.showSuccess(
+        context,
+        'Order cancelled successfully ✅',
       );
       
       // Refresh order details
@@ -146,11 +145,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       Navigator.of(context).pop();
       
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel order: $e'),
-          backgroundColor: Colors.red,
-        ),
+      NotificationService.showError(
+        context,
+        'Failed to cancel order: $e',
       );
     }
   }

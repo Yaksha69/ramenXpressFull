@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/delivery_address.dart';
+import '../services/notification_service.dart';
 import '../services/api_service.dart';
+import '../models/delivery_address.dart';
+import '../widgets/address_dropdown_widget.dart';
+import 'add_address_page.dart';
 
 class AddressPage extends StatefulWidget {
   const AddressPage({super.key});
@@ -52,23 +55,11 @@ class _AddressPageState extends State<AddressPage> {
         await api.createDeliveryAddressFromMap(newAddress);
         await _fetchAddresses(); // Refresh from backend
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Address added successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // Refresh the address list but stay on this page
-          await _fetchAddresses();
+          NotificationService.showSuccess(context, 'Address added successfully');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to add address: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          NotificationService.showError(context, 'Failed to add address: $e');
         }
       }
     }
@@ -94,67 +85,56 @@ class _AddressPageState extends State<AddressPage> {
 
   Future<void> _deleteAddress(DeliveryAddress address) async {
     if (!context.mounted) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await NotificationService.showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Address'),
-        content: Text('Are you sure you want to delete this address?\n\n${address.fullAddress}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete Address',
+      message: 'Are you sure you want to delete this address?\n\n${address.fullAddress}',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmColor: Colors.red,
     );
 
     if (confirmed == true && context.mounted) {
-      setState(() {
-        _addresses.removeWhere((a) => a.id == address.id);
-        // If we deleted the default address and there are other addresses, make the first one default
-        if (address.isDefault && _addresses.isNotEmpty) {
-          _addresses.first.isDefault = true;
+      try {
+        // Show loading
+        NotificationService.showLoadingDialog(context, message: 'Deleting address...');
+        
+        // Call API to delete address from backend
+        final api = ApiService();
+        await api.deleteDeliveryAddress(address.id);
+        
+        // Hide loading
+        NotificationService.hideLoadingDialog(context);
+        
+        if (context.mounted) {
+          NotificationService.showSuccess(context, 'Address deleted successfully');
+          // Refresh the address list from backend
+          await _fetchAddresses();
         }
-      });
-      
-      if (context.mounted) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Address deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Refresh the address list but stay on this page
-        await _fetchAddresses();
+      } catch (e) {
+        // Hide loading
+        NotificationService.hideLoadingDialog(context);
+        
+        if (context.mounted) {
+          NotificationService.showError(context, 'Failed to delete address: $e');
+        }
       }
     }
   }
 
   Future<void> _setDefaultAddress(DeliveryAddress address) async {
-    setState(() {
-      // Remove default from all addresses
-      for (var addr in _addresses) {
-        addr.isDefault = false;
-      }
-      // Set the selected address as default
-      address.isDefault = true;
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Default address updated'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    
-    // Refresh the address list but stay on this page
-    await _fetchAddresses();
+    try {
+      // Call API to set default address on backend
+      final api = ApiService();
+      await api.setDefaultDeliveryAddress(address.id);
+      
+      NotificationService.showSuccess(context, 'Default address updated');
+      
+      // Refresh the address list from backend
+      await _fetchAddresses();
+    } catch (e) {
+      NotificationService.showError(context, 'Failed to update default address: $e');
+    }
   }
 
   @override
@@ -273,6 +253,22 @@ class _AddressPageState extends State<AddressPage> {
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
+                                          address.recipientName,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          address.recipientMobile,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
                                           address.fullAddress,
                                           style: const TextStyle(fontSize: 15),
                                         ),
@@ -319,181 +315,6 @@ class _AddressPageState extends State<AddressPage> {
   }
 }
 
-class AddAddressPage extends StatefulWidget {
-  const AddAddressPage({super.key});
-
-  @override
-  State<AddAddressPage> createState() => _AddAddressPageState();
-}
-
-class _AddAddressPageState extends State<AddAddressPage> {
-  final _formKey = GlobalKey<FormState>();
-  final houseStreetController = TextEditingController();
-  final barangayController = TextEditingController();
-  final cityController = TextEditingController();
-  final provinceController = TextEditingController();
-  final zipController = TextEditingController();
-  bool isDefault = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Delivery Address'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // House/Building Number & Street Name
-                TextFormField(
-                  controller: houseStreetController,
-                  decoration: InputDecoration(
-                    labelText: 'House/Building Number & Street Name',
-                    hintText: '#123 Marasigan St.',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'House/Building & Street is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // Barangay/Subdivision
-                TextFormField(
-                  controller: barangayController,
-                  decoration: InputDecoration(
-                    labelText: 'Barangay/Subdivision',
-                    hintText: 'Barangay Poblacion 5',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Barangay/Subdivision is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // City/Municipality
-                TextFormField(
-                  controller: cityController,
-                  decoration: InputDecoration(
-                    labelText: 'City/Municipality',
-                    hintText: 'Calaca City',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'City/Municipality is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // Province
-                TextFormField(
-                  controller: provinceController,
-                  decoration: InputDecoration(
-                    labelText: 'Province',
-                    hintText: 'Batangas',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Province is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // ZIP/Postal Code
-                TextFormField(
-                  controller: zipController,
-                  decoration: InputDecoration(
-                    labelText: 'ZIP/Postal Code',
-                    hintText: 'e.g., 4208',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'ZIP/Postal Code is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                Row(
-                  children: [
-                    Checkbox(
-                      value: isDefault,
-                      onChanged: (val) => setState(() => isDefault = val ?? false),
-                      activeColor: Colors.red,
-                    ),
-                    const Text('Set as default address'),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        final addressData = {
-                          'street': houseStreetController.text.trim(),
-                          'barangay': barangayController.text.trim(),
-                          'municipality': cityController.text.trim(),
-                          'province': provinceController.text.trim(),
-                          'zipCode': zipController.text.trim(),
-                          'isDefault': isDefault,
-                        };
-                        Navigator.of(context).pop(addressData);
-                      }
-                    },
-                    child: const Text('Save', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      backgroundColor: Colors.white,
-    );
-  }
-}
-
 class EditAddressPage extends StatefulWidget {
   final DeliveryAddress address;
   
@@ -505,30 +326,44 @@ class EditAddressPage extends StatefulWidget {
 
 class _EditAddressPageState extends State<EditAddressPage> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController recipientNameController;
+  late final TextEditingController recipientMobileController;
   late final TextEditingController streetController;
-  late final TextEditingController barangayController;
-  late final TextEditingController municipalityController;
-  late final TextEditingController provinceController;
   late final TextEditingController zipController;
+  
+  String? selectedProvince;
+  String? selectedCity;
+  String? selectedBarangay;
 
   @override
   void initState() {
     super.initState();
+    recipientNameController = TextEditingController(text: widget.address.recipientName);
+    recipientMobileController = TextEditingController(text: widget.address.recipientMobile);
     streetController = TextEditingController(text: widget.address.street);
-    barangayController = TextEditingController(text: widget.address.barangay);
-    municipalityController = TextEditingController(text: widget.address.municipality);
-    provinceController = TextEditingController(text: widget.address.province);
     zipController = TextEditingController(text: widget.address.zipCode);
+    
+    // Initialize dropdown selections
+    selectedProvince = widget.address.province;
+    selectedCity = widget.address.municipality;
+    selectedBarangay = widget.address.barangay;
   }
 
   @override
   void dispose() {
+    recipientNameController.dispose();
+    recipientMobileController.dispose();
     streetController.dispose();
-    barangayController.dispose();
-    municipalityController.dispose();
-    provinceController.dispose();
     zipController.dispose();
     super.dispose();
+  }
+
+  void _onAddressChanged(String province, String city, String barangay) {
+    setState(() {
+      selectedProvince = province;
+      selectedCity = city;
+      selectedBarangay = barangay;
+    });
   }
 
   @override
@@ -548,6 +383,46 @@ class _EditAddressPageState extends State<EditAddressPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Recipient Name
+                TextFormField(
+                  controller: recipientNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Recipient Full Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Recipient name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // Recipient Mobile Number
+                TextFormField(
+                  controller: recipientMobileController,
+                  decoration: InputDecoration(
+                    labelText: 'Mobile Number',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Mobile number is required';
+                    }
+                    if (!RegExp(r'^[0-9+\-\s()]+$').hasMatch(value)) {
+                      return 'Please enter a valid mobile number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
                 // House/Building Number & Street Name
                 TextFormField(
                   controller: streetController,
@@ -566,57 +441,11 @@ class _EditAddressPageState extends State<EditAddressPage> {
                 ),
                 const SizedBox(height: 14),
 
-                // Barangay/Subdivision
-                TextFormField(
-                  controller: barangayController,
-                  decoration: InputDecoration(
-                    labelText: 'Barangay/Subdivision',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Barangay/Subdivision is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // City/Municipality
-                TextFormField(
-                  controller: municipalityController,
-                  decoration: InputDecoration(
-                    labelText: 'City/Municipality',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'City/Municipality is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                // Province
-                TextFormField(
-                  controller: provinceController,
-                  decoration: InputDecoration(
-                    labelText: 'Province',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Province is required';
-                    }
-                    return null;
-                  },
+                // Address Dropdown Widget
+                AddressDropdownWidget(
+                  initialCity: selectedCity,
+                  initialBarangay: selectedBarangay,
+                  onAddressChanged: _onAddressChanged,
                 ),
                 const SizedBox(height: 14),
 
@@ -649,12 +478,19 @@ class _EditAddressPageState extends State<EditAddressPage> {
                     ),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
+                        if (selectedProvince == null || selectedCity == null || selectedBarangay == null) {
+                          NotificationService.showError(context, 'Please select province, city, and barangay');
+                          return;
+                        }
+                        
                         final editedAddress = DeliveryAddress(
                           id: widget.address.id,
+                          recipientName: recipientNameController.text.trim(),
+                          recipientMobile: recipientMobileController.text.trim(),
                           street: streetController.text.trim(),
-                          barangay: barangayController.text.trim(),
-                          municipality: municipalityController.text.trim(),
-                          province: provinceController.text.trim(),
+                          barangay: selectedBarangay!,
+                          municipality: selectedCity!,
+                          province: selectedProvince!,
                           zipCode: zipController.text.trim(),
                           isDefault: widget.address.isDefault,
                         );
